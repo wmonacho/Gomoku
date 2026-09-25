@@ -10,6 +10,12 @@ LDFLAGS     = -Llibs/sfml/lib -Wl,-rpath=./libs/sfml/lib -lsfml-graphics -lsfml-
 
 # Fichiers sources
 SRCS        = src/main.cpp \
+              src/app/GameService.cpp \
+              src/core/Board.cpp \
+              src/core/Rules.cpp \
+              src/core/Game.cpp \
+              src/core/ai/Search.cpp \
+              src/core/ai/Eval.cpp \
               libs/imgui/imgui.cpp \
               libs/imgui/imgui_draw.cpp \
               libs/imgui/imgui_tables.cpp \
