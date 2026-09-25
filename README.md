@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/banner.svg" alt="Gomoku 3D animated banner" width="100%"/>
+<img src="assets/banner.svg" alt="Goban 3D animé : les noirs alignent 5 pierres et gagnent" width="100%"/>
 
 <a href="https://git.io/typing-svg"><img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=22&pause=1000&color=F7B733&center=true&vCenter=true&width=600&lines=Yeah%2C+well%2C+your+brain+has+to+fry+sometime+%F0%9F%A7%A0%F0%9F%94%A5;19x19+Goban+%E2%80%A2+Captures+%E2%80%A2+No+double-threes;An+AI+that+thinks+in+under+0.5s+%E2%9A%A1" alt="Typing SVG" /></a>
 
@@ -88,9 +88,22 @@ Gomoku/
 ├── 📁 libs/            # SFML · Dear ImGui · ImGui-SFML
 ├── 📁 src/
 │   ├── main.cpp
-│   └── 📁 ui/          # Menus & rendu
+│   ├── 📁 ui/          # Menus & rendu SFML / ImGui
+│   │   └── mainMenu
+│   ├── 📁 app/         # Contrat entre l'UI et le moteur
+│   │   ├── Dto.hpp     # Types échangés : Pos, Cell, MoveResult, AiMove, GameView
+│   │   └── GameService # Façade : nouvelle partie, coups humain / IA, suggestion
+│   └── 📁 core/        # Moteur de jeu, sans dépendance graphique
+│       ├── Board       # Goban 19×19
+│       ├── Rules       # Captures, alignement de 5, double-trois
+│       ├── Game        # État de la partie : tour, captures, vainqueur, undo
+│       └── 📁 ai/
+│           ├── Search  # Minimax + Alpha-Bêta, limité en temps
+│           └── Eval    # Heuristique d'évaluation
 └── Makefile
 ```
+
+L'UI ne parle qu'à `GameService` et ne manipule que les types de `Dto.hpp`. Le `core` peut ainsi évoluer sans toucher au rendu.
 
 ---
 
