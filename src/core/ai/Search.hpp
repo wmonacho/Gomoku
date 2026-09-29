@@ -8,7 +8,7 @@ public:
     Search();
 
     // Modifie temporairement game (play/undo), mais le rend dans son état initial.
-    AiMove findBestMove(Game& game, double timeLimitMs);
+    MoveSuggestion findBestMove(Game& game, double timeLimitMs);
 
 private:
 };
