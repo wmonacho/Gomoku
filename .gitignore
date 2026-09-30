@@ -1,1 +1,37 @@
+# ========================
+# Fichiers de compilation & build
+# ========================
+obj/
+*.o
+*.a
+*.so
+*.dylib
+*.out
+imgui.ini
+
+# Exécutables finaux & tests
+gomoku
 gomoku.subject.pdf
+
+# ========================
+# Bibliothèques locales lourdes
+# ========================
+*.tar.gz
+*.zip
+
+# ========================
+# Fichiers d'IDE et éditeurs
+# ========================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ========================
+# Profiling & Sanitizers
+# ========================
+*.dSYM/
+gmon.out
+asan.log.*
