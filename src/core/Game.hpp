@@ -23,7 +23,5 @@ public:
 private:
     Board               board_;
     Cell                currentPlayer_;
-    int                 blackCaptureCount_;
-    int                 whiteCaptureCount_;
     std::optional<Cell> winner_;
 };

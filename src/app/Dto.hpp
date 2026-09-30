@@ -25,13 +25,12 @@ struct MoveResult {
     std::vector<Pos> captured;
 };
 
-struct AiMove {
+struct MoveSuggestion {
     Pos              pos;
     double           elapsedMs;
     int              depth;
     long             nodesEvaluated;
     std::vector<Pos> principalVariation;
-    std::vector<Pos> captured;
 };
 
 struct GameView {

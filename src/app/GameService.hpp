@@ -9,14 +9,12 @@ public:
     GameService();
 
     // humanColor n'est utilisé qu'en mode PvAI.
-    void       newGame(Mode mode, Cell humanColor);
-    MoveResult playHumanMove(Pos pos);
-    AiMove     playAiMove();
-    
-    // Meilleur coup pour le joueur courant, sans le jouer (aide au joueur humain).
-    Pos        suggestMove();
-    GameView   currentView() const;
-    bool       isLegalMove(Pos pos) const;
+    void           newGame(Mode mode, Cell humanColor);
+    MoveResult     playMove(Pos pos);
+    // Meilleur coup pour le joueur courant, sans le jouer : l'appelant enchaîne avec playMove.
+    MoveSuggestion suggestMove();
+    GameView       currentView() const;
+    bool           isLegalMove(Pos pos) const;
 
 private:
     Game game_;

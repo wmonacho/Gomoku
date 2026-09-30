@@ -1,8 +1,11 @@
 #include "core/ai/Eval.hpp"
 
+#include <cassert>
+
 namespace Eval {
 
 int evaluate(const Game& game, Cell color) {
+    assert(color != Cell::Empty && "evaluate() demande le point de vue d'un joueur, pas Empty");
     // TODO:
     // 1. Victoire / défaite (winner) : retourner un très grand score positif / négatif.
     // 2. Pour chaque ligne du plateau, repérer les motifs (5, quatre ouvert, quatre fermé, trois ouvert...)

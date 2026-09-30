@@ -45,4 +45,17 @@ fclean: clean
 
 re: fclean all
 
-.PHONY: all clean fclean re
+# Tests du moteur : seulement core/, sans SFML. Chaque tests/*Test.cpp donne un binaire.
+TEST_DIR     = $(OBJ_DIR)/tests
+TEST_BINS    = $(patsubst tests/%.cpp,$(TEST_DIR)/%,$(wildcard tests/*Test.cpp))
+TEST_SUPPORT = tests/support/TestRunner.cpp
+CORE_SRCS    = $(filter src/core/%,$(SRCS))
+
+$(TEST_DIR)/%: tests/%.cpp $(TEST_SUPPORT) $(CORE_SRCS)
+	@mkdir -p $(TEST_DIR)
+	$(CXX) $(CXXFLAGS) -Isrc -Itests $^ -o $@
+
+test: $(TEST_BINS)
+	@for test in $(TEST_BINS); do ./$$test || exit 1; done
+
+.PHONY: all clean fclean re test
