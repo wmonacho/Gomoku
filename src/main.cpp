@@ -1,13 +1,51 @@
 #include <SFML/Graphics.hpp>
 #include <imgui-SFML.h>
-#include <imgui.h> // Si nécessaire, toujours APRES imgui-SFML.h
+#include <imgui.h>
+#include "ui/mainMenu.hpp"
+
+ImFont* chargeFont() {
+    ImGuiIO& io = ImGui::GetIO();
+
+    ImFont* bodyFont = io.Fonts->AddFontFromFileTTF("assets/fonts/Monocraft.ttf", 18.0f);
+    if (!bodyFont) {
+        std::cerr << "Error: Failed to load font 'assets/fonts/Monocraft.ttf' (18px)" << std::endl;
+        return nullptr;
+    }
+    io.FontDefault = bodyFont;
+
+    ImFont* titleFont = io.Fonts->AddFontFromFileTTF("assets/fonts/Monocraft.ttf", 150.0f);
+    if (!titleFont) {
+        std::cerr << "Error: Failed to load font 'assets/fonts/Monocraft.ttf' (150px)" << std::endl;
+        return nullptr;
+    }
+
+    if (!ImGui::SFML::UpdateFontTexture()) {
+        std::cerr << "Error: Failed to update ImGui-SFML font texture" << std::endl;
+        return nullptr;
+    }
+    return titleFont;
+}
 
 int main() {
     sf::RenderWindow window(sf::VideoMode(1400, 800), "Gomoku");
     window.setFramerateLimit(60);
-
-    if (!ImGui::SFML::Init(window))
+    if (!ImGui::SFML::Init(window)) {
         return -1;
+    }
+
+    MainMenu menu;
+    if (!menu.loadBackgroundFrames(60)) {
+        return -1;
+    }
+
+    ImFont* titleFont = chargeFont();
+    if (!titleFont) {
+        std::cerr << "Fatal Error: Failed to initialize fonts. Aborting." << std::endl;
+        ImGui::SFML::Shutdown();
+        return -1;
+    }
+    menu.setTitleFont(titleFont);
+
 
     sf::Clock deltaClock;
     while (window.isOpen()) {
@@ -19,16 +57,14 @@ int main() {
         }
 
         ImGui::SFML::Update(window, deltaClock.restart());
+        window.clear(sf::Color(30, 30, 30));
 
-        // Fenêtre ImGui de test
-        ImGui::Begin("Parametres IA");
-        ImGui::Text("Tour : Joueur 1 (Noir)");
-        if (ImGui::Button("Test Clic")) {
-            // Action test
+        if (!menu.isGameStarted()) {
+            menu.render(window);
+        } else {
+            // TODO Game board
         }
-        ImGui::End();
 
-        window.clear(sf::Color(50, 50, 50));
         ImGui::SFML::Render(window);
         window.display();
     }
