@@ -21,7 +21,8 @@ SRCS        = src/main.cpp \
               libs/imgui/imgui_tables.cpp \
               libs/imgui/imgui_widgets.cpp \
               libs/imgui-sfml/imgui-SFML.cpp \
-			  src/ui/mainMenu.cpp
+			  src/ui/mainMenu.cpp \
+              src/ui/BoardView.cpp 
 
 # Dossier d'objets et mapping des fichiers .o
 OBJ_DIR     = obj

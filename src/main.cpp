@@ -2,6 +2,7 @@
 #include <imgui-SFML.h>
 #include <imgui.h>
 #include "ui/mainMenu.hpp"
+#include "ui/BoardView.hpp"
 
 ImFont* chargeFont() {
     ImGuiIO& io = ImGui::GetIO();
@@ -34,6 +35,7 @@ int main() {
     }
 
     MainMenu menu;
+    BoardView boardView;
     if (!menu.loadBackgroundFrames(60)) {
         return -1;
     }
@@ -62,7 +64,11 @@ int main() {
         if (!menu.isGameStarted()) {
             menu.render(window);
         } else {
-            // TODO Game board
+            boardView.render(window);
+            if (boardView.shouldReturnToMenu()) {
+                boardView.resetReturnToMenu();
+                // Réinitialise le statut du menu (ajoute un setter ou resetState dans MainMenu)
+            }
         }
 
         ImGui::SFML::Render(window);
