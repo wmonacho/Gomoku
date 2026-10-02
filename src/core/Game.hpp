@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optional>
+#include <string>
 #include <vector>
 
 #include "app/Dto.hpp"
@@ -21,7 +22,18 @@ public:
     std::optional<Cell> winner() const;
 
 private:
+    struct State {
+        Cell                currentPlayer;
+        std::optional<Cell> winner;
+        std::optional<Pos>  pendingFive;
+    };
+
+    std::string         rejectionReason(Pos pos) const;
+
     Board               board_;
     Cell                currentPlayer_;
     std::optional<Cell> winner_;
+
+    std::optional<Pos>  pendingFive_;
+    std::vector<State>  history_;
 };

@@ -10,7 +10,7 @@ obj/
 imgui.ini
 
 # Exécutables finaux & tests
-gomoku
+Gomoku
 gomoku.subject.pdf
 
 # ========================
