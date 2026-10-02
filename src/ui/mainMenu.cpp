@@ -88,7 +88,7 @@ void MainMenu::renderHeader(const ImVec2& windowSize) {
     ImGui::Separator();
 }
 
-void MainMenu::renderModeButtons(const ImVec2& windowSize) {
+void MainMenu::renderModeButtons(const ImVec2& windowSize, GameInfo& gameInfo) {
     ImGuiStyle& style = ImGui::GetStyle();
 
     const char* instructionText = "Choose a game mode:";
@@ -108,43 +108,55 @@ void MainMenu::renderModeButtons(const ImVec2& windowSize) {
 
     if (ImGui::Button("Human vs AI", ImVec2(buttonWidth, buttonHeight))) {
         m_selectedMode = "Human vs AI";
-        m_gameStarted = true;
+        gameInfo.gameView.gameStarted = true;
+        gameInfo.p1Info.isAI = false;
+        gameInfo.p2Info.isAI = true;
+        // clear le board
+        gameInfo.gameView.board.fill(Cell::Empty);
     }
 
     ImGui::SameLine();
 
     if (ImGui::Button("Human vs Human", ImVec2(buttonWidth, buttonHeight))) {
         m_selectedMode = "Human vs Human";
-        m_gameStarted = true;
+        gameInfo.gameView.gameStarted = true;
+        gameInfo.p1Info.isAI = false;
+        gameInfo.p2Info.isAI = false;
+        // clear le board
+        gameInfo.gameView.board.fill(Cell::Empty);
     }
 
     ImGui::SameLine();
 
     if (ImGui::Button("AI vs AI", ImVec2(buttonWidth, buttonHeight))) {
         m_selectedMode = "AI vs AI";
-        m_gameStarted = true;
+        gameInfo.gameView.gameStarted = true;
+        gameInfo.p1Info.isAI = true;
+        gameInfo.p2Info.isAI = true;
+        // clear le board
+        gameInfo.gameView.board.fill(Cell::Empty);
     }
 
     ImGui::Spacing();
     ImGui::Spacing();
 }
 
-void MainMenu::renderOptions(const ImVec2& windowSize) {
+void MainMenu::renderOptions(const ImVec2& windowSize, GameInfo& gameInfo) {
     ImGuiStyle& style = ImGui::GetStyle();
 
     const char* checkboxLabel = "Activate tips in game";
     float checkboxTotalWidth = ImGui::GetFrameHeight() + style.ItemInnerSpacing.x + ImGui::CalcTextSize(checkboxLabel).x;
 
     ImGui::SetCursorPosX((windowSize.x - checkboxTotalWidth) * 0.5f);
-    if (ImGui::Checkbox(checkboxLabel, &m_tipsEnable)) {
-        std::cout << "Tips: " << (m_tipsEnable ? "ON" : "OFF") << std::endl;
+    if (ImGui::Checkbox("Activate tips in game", &gameInfo.gameView.tipsEnable)) {
+        std::cout << "Tips: " << (gameInfo.gameView.tipsEnable ? "ON" : "OFF") << std::endl;
     }
 
     ImGui::Spacing();
     ImGui::Separator();
 }
 
-void MainMenu::render(sf::RenderWindow& window) {
+void MainMenu::render(sf::RenderWindow& window, GameInfo& gameInfo) {
     // 1. Fond SFML
     renderBackground(window);
 
@@ -164,14 +176,10 @@ void MainMenu::render(sf::RenderWindow& window) {
     ImVec2 windowSize = ImGui::GetWindowSize();
 
     renderHeader(windowSize);
-    renderModeButtons(windowSize);
-    renderOptions(windowSize);
+    renderModeButtons(windowSize, gameInfo);
+    renderOptions(windowSize, gameInfo);
 
     ImGui::End();
-}
-
-bool MainMenu::isGameStarted() const {
-    return m_gameStarted;
 }
 
 std::string MainMenu::getSelectedMode() const {

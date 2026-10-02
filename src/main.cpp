@@ -36,6 +36,7 @@ int main() {
 
     MainMenu menu;
     BoardView boardView;
+    GameInfo gameInfo;
     if (!menu.loadBackgroundFrames(60)) {
         return -1;
     }
@@ -56,19 +57,18 @@ int main() {
             ImGui::SFML::ProcessEvent(window, event);
             if (event.type == sf::Event::Closed)
                 window.close();
+            if (gameInfo.gameView.gameStarted) {
+                boardView.handleInput(event, window, gameInfo.gameView);
+            }
         }
 
         ImGui::SFML::Update(window, deltaClock.restart());
         window.clear(sf::Color(30, 30, 30));
 
-        if (!menu.isGameStarted()) {
-            menu.render(window);
+        if (!gameInfo.gameView.gameStarted) {
+            menu.render(window, gameInfo);
         } else {
-            boardView.render(window);
-            if (boardView.shouldReturnToMenu()) {
-                boardView.resetReturnToMenu();
-                // Réinitialise le statut du menu (ajoute un setter ou resetState dans MainMenu)
-            }
+            boardView.render(window, gameInfo);
         }
 
         ImGui::SFML::Render(window);

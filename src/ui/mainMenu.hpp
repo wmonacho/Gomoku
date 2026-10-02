@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <sstream>
 #include <vector>
+#include "../app/Dto.hpp"
 
 class MainMenu {
     public:
@@ -15,8 +16,7 @@ class MainMenu {
         ~MainMenu();
 
         void            setTitleFont(ImFont* font);
-        void            render(sf::RenderWindow& window);
-        bool            isGameStarted() const;
+        void            render(sf::RenderWindow& window, GameInfo& gameInfo);
         bool            isTipsEnabled() const;
         std::string     getSelectedMode() const;
         bool            loadBackgroundFrames(int totalFrames = 60);
@@ -24,13 +24,11 @@ class MainMenu {
     private:
         void            renderBackground(sf::RenderWindow& window);
         void            renderHeader(const ImVec2& windowSize);
-        void            renderModeButtons(const ImVec2& windowSize);
-        void            renderOptions(const ImVec2& windowSize);
+        void            renderModeButtons(const ImVec2& windowSize, GameInfo& gameInfo);
+        void            renderOptions(const ImVec2& windowSize, GameInfo& gameInfo);
 
-        bool                        m_gameStarted = false;
         std::string                 m_selectedMode = "Undefined";
         ImFont*                     m_titleFont = nullptr;
-        bool                        m_tipsEnable = false;
         std::vector<sf::Texture>    m_bgTextures{};
         sf::Sprite                  m_bgSprite{};
         sf::Clock                   m_animClock{};

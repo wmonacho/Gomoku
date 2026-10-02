@@ -33,8 +33,8 @@ GameView GameService::currentView() const {
         for (int x = 0; x < BOARD_SIZE; x++)
             view.board[y * BOARD_SIZE + x] = game_.board().at({x, y});
     view.currentPlayer = game_.currentPlayer();
-    view.blackCaptureCount = game_.captureCount(Cell::Black);
-    view.whiteCaptureCount = game_.captureCount(Cell::White);
+    // view.blackCaptureCount = game_.captureCount(Cell::Black); 
+    // view.whiteCaptureCount = game_.captureCount(Cell::White);
     view.winner = game_.winner();
     return view;
 }

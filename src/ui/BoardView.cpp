@@ -1,10 +1,77 @@
 #include "ui/BoardView.hpp"
 #include <iostream>
 
-BoardView::BoardView() : m_returnToMenu(false) {}
+BoardView::BoardView() {
+    if (m_font.loadFromFile("assets/fonts/Monocraft.ttf")) {
+        m_fontLoaded = true;
+    } else {
+        std::cerr << "Error: Failed to load font for board coordinates." << std::endl;
+    }
+}
+
+void BoardView::handleInput(const sf::Event& event, const sf::RenderWindow& window, GameView& view) {
+    if (event.type != sf::Event::MouseButtonPressed || event.mouseButton.button != sf::Mouse::Left) {
+        return;
+    }
+
+    // Ignore le clic si la souris survole une fenêtre ImGui (les panneaux latéraux)
+    if (ImGui::GetIO().WantCaptureMouse) {
+        return;
+    }
+
+    ImVec2 windowSize(static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y));
+    ImVec2 centerPos(windowSize.x * 0.5f, windowSize.y * 0.44f);
+    float boardSize = 640.0f;
+    float margin = 35.0f;
+
+    float startX = centerPos.x - (boardSize * 0.5f) + margin;
+    float startY = centerPos.y - (boardSize * 0.5f) + margin;
+    float step   = (boardSize - (margin * 2.0f)) / 18.0f;
+
+    float mouseX = static_cast<float>(event.mouseButton.x);
+    float mouseY = static_cast<float>(event.mouseButton.y);
+
+    // Calcul de l'intersection la plus proche
+    int gridX = std::round((mouseX - startX) / step);
+    int gridY = std::round((mouseY - startY) / step);
+
+    // Vérifie qu'on est bien sur la grille 19x19
+    if (gridX < 0 || gridX >= 19 || gridY < 0 || gridY >= 19) {
+        return;
+    }
+
+    // Vérifie que le clic est suffisamment proche du croisement (rayon de tolérance)
+    float intersectionX = startX + gridX * step;
+    float intersectionY = startY + gridY * step;
+    float distSq = (mouseX - intersectionX) * (mouseX - intersectionX) +
+                   (mouseY - intersectionY) * (mouseY - intersectionY);
+
+    float clickRadius = step * 0.45f;
+    if (distSq > clickRadius * clickRadius) {
+        return;
+    }
+
+    int index = gridY * 19 + gridX;
+
+    // Si la case est vide, on pose le pion
+    if (view.board[index] == Cell::Empty) {
+        view.board[index] = view.currentPlayer;
+        view.currentPlayer = view.currentPlayer == Cell::Black ? Cell::White : Cell::Black;
+        
+        // TODO Mise à jour de l'affichage du dernier coup
+        // std::string coordStr = std::to_string(gridX) + ":" + std::to_string(gridY);
+        // if (view.currentPlayer == Cell::Black) {
+        //     view.blackPlayer.lastMoveCoord = coordStr;
+        //     view.currentPlayer = Cell::White;
+        // } else {
+        //     view.whitePlayer.lastMoveCoord = coordStr;
+        //     view.currentPlayer = Cell::Black;
+        // }
+    }
+}
 
 void BoardView::renderPlayerPanel(const std::string& panelId, const PlayerInfo& player, 
-                                 bool isLeft, const ImVec2& windowSize) {
+                                 bool isLeft, const ImVec2& windowSize, bool tipsEnable) {
     float panelWidth = 280.0f;
     float panelHeight = windowSize.y - 40.0f;
     float posX = isLeft ? 20.0f : (windowSize.x - panelWidth - 20.0f);
@@ -17,11 +84,9 @@ void BoardView::renderPlayerPanel(const std::string& panelId, const PlayerInfo& 
                            | ImGuiWindowFlags_NoMove 
                            | ImGuiWindowFlags_NoCollapse;
 
-    ImGui::Begin(panelId.c_str(), nullptr, flags);
+    ImGui::Begin(player.name.c_str(), nullptr, flags);
 
     // Titre / Joueur
-    ImGui::TextColored(isLeft ? ImVec4(0.8f, 0.8f, 0.8f, 1.0f) : ImVec4(1.0f, 1.0f, 1.0f, 1.0f),
-                       "%s", player.name.c_str());
     ImGui::Separator();
     ImGui::Spacing();
 
@@ -40,6 +105,13 @@ void BoardView::renderPlayerPanel(const std::string& panelId, const PlayerInfo& 
     ImGui::Separator();
     ImGui::Spacing();
 
+    //TODO Remplit le best move
+    if (tipsEnable & !player.isAI) {
+        ImGui::Spacing();
+        ImGui::Text("Next best move : ");
+        ImGui::Spacing();
+        ImGui::Separator();
+    }
     // Bouton de forfait
     if (ImGui::Button("Forfeit", ImVec2(-1.0f, 35.0f))) {
         std::cout << player.name << " forfeited the match." << std::endl;
@@ -48,39 +120,151 @@ void BoardView::renderPlayerPanel(const std::string& panelId, const PlayerInfo& 
     ImGui::End();
 }
 
-void BoardView::renderBoard(sf::RenderWindow& window, const ImVec2& centerPos, float boardSize) {
-    // 1. Fond en bois du plateau de Gomoku (Goban)
+// void BoardView::renderBoard(sf::RenderWindow& window, const ImVec2& centerPos, float boardSize) {
+//     // 1. Fond en bois du plateau de Gomoku (Goban)
+//     sf::RectangleShape goban(sf::Vector2f(boardSize, boardSize));
+//     goban.setOrigin(boardSize * 0.5f, boardSize * 0.5f);
+//     goban.setPosition(centerPos.x, centerPos.y);
+//     goban.setFillColor(sf::Color(220, 179, 92)); // Teinte bois chaud
+//     goban.setOutlineThickness(3.0f);
+//     goban.setOutlineColor(sf::Color(40, 25, 10));
+//     window.draw(goban);
+
+//     // 2. Grille 19x19
+//     float startX = centerPos.x - (boardSize * 0.5f) + 20.0f;
+//     float startY = centerPos.y - (boardSize * 0.5f) + 20.0f;
+//     float step = (boardSize - 40.0f) / 18.0f;
+
+//     for (int i = 0; i < 19; ++i) {
+//         // Lignes horizontales
+//         sf::Vertex hLine[] = {
+//             sf::Vertex(sf::Vector2f(startX, startY + i * step), sf::Color::Black),
+//             sf::Vertex(sf::Vector2f(startX + 18 * step, startY + i * step), sf::Color::Black)
+//         };
+//         window.draw(hLine, 2, sf::Lines);
+
+//         // Lignes verticales
+//         sf::Vertex vLine[] = {
+//             sf::Vertex(sf::Vector2f(startX + i * step, startY), sf::Color::Black),
+//             sf::Vertex(sf::Vector2f(startX + i * step, startY + 18 * step), sf::Color::Black)
+//         };
+//         window.draw(vLine, 2, sf::Lines);
+//     }
+// }
+void BoardView::renderBoard(sf::RenderWindow& window, const ImVec2& centerPos, float boardSize, const GameView& view) {
+    // 1. Fond en bois du plateau
     sf::RectangleShape goban(sf::Vector2f(boardSize, boardSize));
     goban.setOrigin(boardSize * 0.5f, boardSize * 0.5f);
     goban.setPosition(centerPos.x, centerPos.y);
-    goban.setFillColor(sf::Color(220, 179, 92)); // Teinte bois chaud
+    goban.setFillColor(sf::Color(220, 179, 92));
     goban.setOutlineThickness(3.0f);
     goban.setOutlineColor(sf::Color(40, 25, 10));
     window.draw(goban);
 
-    // 2. Grille 19x19
-    float startX = centerPos.x - (boardSize * 0.5f) + 20.0f;
-    float startY = centerPos.y - (boardSize * 0.5f) + 20.0f;
-    float step = (boardSize - 40.0f) / 18.0f;
+    // 2. Dimensions et marges
+    float margin = 35.0f;
+    float startX = centerPos.x - (boardSize * 0.5f) + margin;
+    float startY = centerPos.y - (boardSize * 0.5f) + margin;
+    float step   = (boardSize - (margin * 2.0f)) / 18.0f;
 
+    // 3. Tracé des lignes de la grille
     for (int i = 0; i < 19; ++i) {
-        // Lignes horizontales
+        float currentX = startX + i * step;
+        float currentY = startY + i * step;
+
         sf::Vertex hLine[] = {
-            sf::Vertex(sf::Vector2f(startX, startY + i * step), sf::Color::Black),
-            sf::Vertex(sf::Vector2f(startX + 18 * step, startY + i * step), sf::Color::Black)
+            sf::Vertex(sf::Vector2f(startX, currentY), sf::Color::Black),
+            sf::Vertex(sf::Vector2f(startX + 18.0f * step, currentY), sf::Color::Black)
         };
         window.draw(hLine, 2, sf::Lines);
 
-        // Lignes verticales
         sf::Vertex vLine[] = {
-            sf::Vertex(sf::Vector2f(startX + i * step, startY), sf::Color::Black),
-            sf::Vertex(sf::Vector2f(startX + i * step, startY + 18 * step), sf::Color::Black)
+            sf::Vertex(sf::Vector2f(currentX, startY), sf::Color::Black),
+            sf::Vertex(sf::Vector2f(currentX, startY + 18.0f * step), sf::Color::Black)
         };
         window.draw(vLine, 2, sf::Lines);
     }
+
+    // 4. Police persistante et statique
+    static sf::Font font;
+    static bool fontReady = false;
+    static bool fontAttempted = false;
+
+    if (!fontAttempted) {
+        fontAttempted = true;
+        fontReady = font.loadFromFile("assets/fonts/Monocraft.ttf");
+        if (!fontReady) {
+            std::cerr << "Error: Failed to load font 'assets/fonts/Monocraft.ttf' for BoardView" << std::endl;
+        }
+    }
+
+    if (!fontReady) {
+        return;
+    }
+
+    // 5. Affichage des chiffres 0 à 18
+    sf::Text coordText;
+    coordText.setFont(font);
+    coordText.setCharacterSize(12);
+    coordText.setFillColor(sf::Color(50, 30, 15));
+
+    for (int i = 0; i < 19; ++i) {
+        float currentX = startX + i * step;
+        float currentY = startY + i * step;
+
+        coordText.setString(std::to_string(i));
+
+        sf::FloatRect bounds = coordText.getLocalBounds();
+        coordText.setOrigin(bounds.left + bounds.width * 0.5f,
+                            bounds.top + bounds.height * 0.5f);
+
+        // Axe horizontal (Haut et Bas)
+        coordText.setPosition(currentX, startY - 18.0f);
+        window.draw(coordText);
+
+        coordText.setPosition(currentX, startY + 18.0f * step + 18.0f);
+        window.draw(coordText);
+
+        // Axe vertical (Gauche et Droite)
+        coordText.setPosition(startX - 18.0f, currentY);
+        window.draw(coordText);
+
+        coordText.setPosition(startX + 18.0f * step + 18.0f, currentY);
+        window.draw(coordText);
+    }
+
+    // Previsuatlisation des pierres
+    float stoneRadius = step * 0.42f;
+    sf::CircleShape stone(stoneRadius);
+    stone.setOrigin(stoneRadius, stoneRadius);
+
+    for (int y = 0; y < 19; ++y) {
+        for (int x = 0; x < 19; ++x) {
+            int index = y * 19 + x;
+            Cell cell = view.board[index];
+
+            if (cell == Cell::Empty) {
+                continue;
+            }
+
+            stone.setPosition(startX + x * step, startY + y * step);
+
+            if (cell == Cell::Black) {
+                stone.setFillColor(sf::Color(20, 20, 20));
+                stone.setOutlineThickness(1.0f);
+                stone.setOutlineColor(sf::Color(60, 60, 60));
+            } else if (cell == Cell::White) {
+                stone.setFillColor(sf::Color(240, 240, 240));
+                stone.setOutlineThickness(1.0f);
+                stone.setOutlineColor(sf::Color(180, 180, 180));
+            }
+
+            window.draw(stone);
+        }
+    }
 }
 
-void BoardView::renderBottomControls(const ImVec2& windowSize) {
+void BoardView::renderBottomControls(const ImVec2& windowSize, GameView& view) {
     float btnWidth = 200.0f;
     float btnHeight = 35.0f;
 
@@ -91,25 +275,25 @@ void BoardView::renderBottomControls(const ImVec2& windowSize) {
                            | ImGuiWindowFlags_NoResize 
                            | ImGuiWindowFlags_NoMove 
                            | ImGuiWindowFlags_NoBackground;
-
+ 
     ImGui::Begin("BottomControls", nullptr, flags);
     if (ImGui::Button("Return to Menu", ImVec2(btnWidth, btnHeight))) {
-        m_returnToMenu = true;
+        view.gameStarted = false;
     }
     ImGui::End();
 }
 
-void BoardView::render(sf::RenderWindow& window) {
+void BoardView::render(sf::RenderWindow& window, GameInfo& gameInfo) {
     ImVec2 windowSize(static_cast<float>(window.getSize().x), 
                       static_cast<float>(window.getSize().y));
 
     // 1. Dessiner le Goban au centre (taille carrée ~650x650)
-    renderBoard(window, ImVec2(windowSize.x * 0.5f, windowSize.y * 0.44f), 640.0f);
+    renderBoard(window, ImVec2(windowSize.x * 0.5f, windowSize.y * 0.44f), 640.0f, gameInfo.gameView);
 
     // 2. Panneaux latéraux ImGui
-    renderPlayerPanel("BlackPlayerPanel", m_blackPlayer, true, windowSize);
-    renderPlayerPanel("WhitePlayerPanel", m_whitePlayer, false, windowSize);
+    renderPlayerPanel("BlackPlayerPanel", gameInfo.p1Info, true, windowSize, gameInfo.gameView.tipsEnable);
+    renderPlayerPanel("WhitePlayerPanel", gameInfo.p2Info, false, windowSize, gameInfo.gameView.tipsEnable);
 
     // 3. Bouton retour au menu en bas
-    renderBottomControls(windowSize);
+    renderBottomControls(windowSize, gameInfo.gameView);
 }
