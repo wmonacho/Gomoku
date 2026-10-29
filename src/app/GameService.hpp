@@ -8,8 +8,8 @@ class GameService {
 public:
     GameService();
 
-    // humanColor n'est utilisé qu'en mode PvAI.
-    void           newGame(Mode mode, Cell humanColor);
+    // difficulty = profondeur maximale de l'IA, en coups.
+    void           newGame(Mode mode, int difficulty, GameInfo& gameInfo);
     MoveResult     playMove(Pos pos);
     // Meilleur coup pour le joueur courant, sans le jouer : l'appelant enchaîne avec playMove.
     MoveSuggestion suggestMove();
@@ -19,6 +19,6 @@ public:
 private:
     Game game_;
     Mode mode_;
-    Cell humanColor_;
+    int  difficulty_;
     Search search_;
 };
