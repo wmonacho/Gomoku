@@ -51,7 +51,7 @@ The goal of this 42 project: build an **AI able to beat human players**, in unde
 ```bash
 git clone <repo-url> Gomoku && cd Gomoku
 make        # build the binary
-./gomoku    # start the game
+./Gomoku    # start the game
 ```
 
 | Command | Effect |
