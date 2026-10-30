@@ -27,10 +27,15 @@ enum class WinReason {
     Timeout = 'T',
 };
 
+enum class StopReason { MaxDepth, TimeUp };
+
 struct Pos {
     int x;
     int y;
 };
+
+// Hors plateau : playMove le refuse, contrairement à {0, 0} qui peut être jouable ou occupée.
+constexpr Pos NO_MOVE = {-1, -1};
 
 struct MoveResult {
     bool             isLegal;
@@ -44,6 +49,8 @@ struct MoveSuggestion {
     int              depth;
     long             nodesEvaluated;
     std::vector<Pos> principalVariation;
+    StopReason       stopReason;
+    bool             forcedWin;  // l'IA gagne quoi que joue l'adversaire
 };
 
 struct PlayerInfo {
@@ -68,6 +75,7 @@ struct GameInfo {
     int     difficulty = 1;
 
     GameView gameView;
+    
     PlayerInfo p1Info{"Player 1 (Black)", false, 0, 0.0f, "-", Cell::Black};
     PlayerInfo p2Info{"Player 2 (White)", false, 0, 0.0f, "-", Cell::White};
 };

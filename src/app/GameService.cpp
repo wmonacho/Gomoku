@@ -1,11 +1,10 @@
 #include "app/GameService.hpp"
+#include "core/ai/SearchConfig.hpp"
 #include <iostream>
-namespace {
 
-    // Le sujet impose moins de 0,5 s en moyenne par coup.
-    constexpr double SEARCH_TIME_LIMIT_MS = 500.0;
-    // Le sujet impose au moins 10 niveaux de profondeur.
-    constexpr int DEFAULT_DIFFICULTY = 10;
+#include <cassert>
+
+namespace {
 
     void resetStats(PlayerInfo& player) {
         player.capturedStones = 0;
@@ -14,7 +13,7 @@ namespace {
     }
 }
 
-GameService::GameService() : mode_(Mode::PvAI), difficulty_(DEFAULT_DIFFICULTY) {}
+GameService::GameService() : mode_(Mode::PvAI), difficulty_(SearchConfig::DEPTH) {}
 
 void GameService::newGame(GameInfo& gameInfo) {
     assert(gameInfo.difficulty > 0 && "newGame() : difficulty doit être une profondeur positive");
@@ -35,6 +34,7 @@ void GameService::newGame(GameInfo& gameInfo) {
     mode_ = gameInfo.selectedMode;
     difficulty_ = gameInfo.difficulty;
     game_.reset(gameInfo.gameView.currentPlayer->color);
+    search_.clear();
 
     resetStats(gameInfo.p1Info);
     resetStats(gameInfo.p2Info);
@@ -51,7 +51,9 @@ MoveResult GameService::playMove(Pos pos) {
 }
 
 MoveSuggestion GameService::suggestMove() {
-    return search_.findBestMove(game_, difficulty_, SEARCH_TIME_LIMIT_MS);
+    if (game_.winner())
+        return {NO_MOVE, 0.0, 0, 0, {}, StopReason::MaxDepth, false};
+    return search_.findBestMove(game_, difficulty_, SearchConfig::TIME_LIMIT_MS);
 }
 // Est ce que c'est utiliser actuellement ? 
 GameView GameService::currentView() const {

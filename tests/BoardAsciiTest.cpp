@@ -1,5 +1,10 @@
 #include "support/BoardAscii.hpp"
 
+#include <string>
+#include <vector>
+
+#include "app/Dto.hpp"
+#include "core/Board.hpp"
 #include "support/TestRunner.hpp"
 
 namespace {

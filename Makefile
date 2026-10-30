@@ -3,6 +3,8 @@ NAME        = Gomoku
 # Compilateur et flags
 CXX         = c++
 CXXFLAGS    = -Wall -Wextra -Werror -std=c++20 -O3 -Wno-unused-parameter
+# Retire les assert de l'exécutable, pas des tests. Pour les garder : make re RELEASE_FLAGS=
+RELEASE_FLAGS = -DNDEBUG
 
 # Chemins d'include et bibliothèques
 INCLUDES    = -Isrc -isystem libs/sfml/include -isystem libs/imgui -isystem libs/imgui-sfml
@@ -33,7 +35,7 @@ all: $(NAME)
 # Règle de compilation des objets avec création automatique du sous-dossier
 $(OBJ_DIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(RELEASE_FLAGS) $(INCLUDES) -c $< -o $@
 
 # Règle d'édition des liens
 $(NAME): $(OBJS)
@@ -47,17 +49,28 @@ fclean: clean
 
 re: fclean all
 
-# Tests du moteur : seulement core/, sans SFML. Chaque tests/*Test.cpp donne un binaire.
+# Tests du moteur : core/ et app/, sans SFML. Chaque tests/*Test.cpp donne un binaire.
 TEST_DIR     = $(OBJ_DIR)/tests
 TEST_BINS    = $(patsubst tests/%.cpp,$(TEST_DIR)/%,$(wildcard tests/*Test.cpp))
 TEST_SUPPORT = $(wildcard tests/support/*.cpp)
-CORE_SRCS    = $(filter src/core/%,$(SRCS))
+ENGINE_SRCS  = $(filter src/core/% src/app/%,$(SRCS))
 
-$(TEST_DIR)/%: tests/%.cpp $(TEST_SUPPORT) $(CORE_SRCS)
+$(TEST_DIR)/%: tests/%.cpp $(TEST_SUPPORT) $(ENGINE_SRCS)
 	@mkdir -p $(TEST_DIR)
 	$(CXX) $(CXXFLAGS) -Isrc -Itests $^ -o $@
 
 test: $(TEST_BINS)
 	@for test in $(TEST_BINS); do ./$$test || exit 1; done
 
-.PHONY: all clean fclean re test
+# Bench de la recherche, compilé comme le jeu (sans assert). Autre limite de temps : make bench BENCH_ARGS=1000
+BENCH_BIN  = $(OBJ_DIR)/bench/SearchBench
+BENCH_ARGS =
+
+$(BENCH_BIN): bench/SearchBench.cpp $(ENGINE_SRCS)
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(RELEASE_FLAGS) -Isrc $^ -o $@
+
+bench: $(BENCH_BIN)
+	./$(BENCH_BIN) $(BENCH_ARGS)
+
+.PHONY: all clean fclean re test bench

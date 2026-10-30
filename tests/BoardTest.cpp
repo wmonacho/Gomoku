@@ -1,7 +1,10 @@
 #include "core/Board.hpp"
 
+#include <array>
+#include <cstdint>
 #include <random>
 
+#include "app/Dto.hpp"
 #include "support/TestRunner.hpp"
 
 namespace {

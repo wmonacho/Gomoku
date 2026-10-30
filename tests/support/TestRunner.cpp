@@ -1,9 +1,11 @@
 #include "support/TestRunner.hpp"
 
 #include <chrono>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <new>
+#include <ratio>
 #include <thread>
 #include <unistd.h>
 

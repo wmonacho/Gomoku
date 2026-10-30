@@ -1,5 +1,9 @@
 #include "core/Rules.hpp"
 
+#include <vector>
+
+#include "app/Dto.hpp"
+#include "core/Board.hpp"
 #include "support/BoardAscii.hpp"
 #include "support/TestRunner.hpp"
 

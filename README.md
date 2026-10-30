@@ -17,7 +17,8 @@ The goal of this 42 project: build an **AI able to beat human players**, in unde
 
 ### Game modes
 - **Player vs AI**: the AI has to win, without you letting it
-- **Player vs Player**: on the same machine, with move suggestions
+- **Player vs Player**: on the same machine, with optional move suggestions
+- **AI vs AI**: watch the engine play against itself
 - Timer showing how long the AI takes to think
 
 </td>
@@ -32,6 +33,15 @@ The goal of this 42 project: build an **AI able to beat human players**, in unde
 </td>
 </tr>
 </table>
+
+### Current status
+
+| Part | State |
+|---|---|
+| **Game engine** (board, captures, five-in-a-row, endgame capture, double-three, undo) | Done and tested |
+| **Interface** (animated menu, goban, stone placement and preview, player panels) | Done |
+| **UI ↔ engine wiring** | To do: the board only places stones for now, rules, captures and victory are not applied in game |
+| **AI** (search and evaluation) | In progress: move generation is written, the search and the heuristic are not |
 
 ## <img src="assets/titles/rules.svg" alt="Rules"/>
 
@@ -54,9 +64,12 @@ make        # build the binary
 ./Gomoku    # start the game
 ```
 
+SFML 2.6, Dear ImGui and ImGui-SFML are included in `libs/`. Start the game from the repository root: fonts, images and SFML libraries are loaded from relative paths.
+
 | Command | Effect |
 |---|---|
 | `make` / `make all` | Build the project |
+| `make test` | Build and run the engine tests (no SFML needed) |
 | `make clean` | Remove object files |
 | `make fclean` | Remove object files and binary |
 | `make re` | Rebuild everything |
@@ -65,23 +78,26 @@ make        # build the binary
 
 ```
 Gomoku/
-├── assets/          # README visuals
+├── assets/          # Game font and menu animation, README visuals
 ├── libs/            # SFML · Dear ImGui · ImGui-SFML
 ├── src/
 │   ├── main.cpp
 │   ├── ui/          # Menus & SFML / ImGui rendering
-│   │   └── mainMenu
+│   │   ├── mainMenu    # Animated menu: game mode, tips option
+│   │   └── BoardView   # Goban, stones, player panels
 │   ├── app/         # Contract between the UI and the engine
-│   │   ├── Dto.hpp     # Shared types: Pos, Cell, MoveResult, MoveSuggestion, GameView
+│   │   ├── Dto.hpp     # Shared types: Pos, Cell, MoveResult, MoveSuggestion, GameView, GameInfo
 │   │   └── GameService # Facade: new game, play a move, move suggestion
 │   └── core/        # Game engine, no graphics dependency
 │       ├── Board       # 19×19 goban
 │       ├── Rules       # Captures, five-in-a-row, double-three
 │       ├── Game        # Game state: turn, captures, winner, undo
 │       └── ai/
-│           ├── Search  # Time-limited Minimax + Alpha-Beta
-│           └── Eval    # Evaluation heuristic
+│           ├── Search  # Time-limited Minimax + Alpha-Beta (in progress)
+│           └── Eval    # Evaluation heuristic (in progress)
+├── tests/           # Engine tests, one binary per *Test.cpp
+│   └── support/        # Test runner, ASCII board helpers
 └── Makefile
 ```
 
-The UI only talks to `GameService` and only handles the types from `Dto.hpp`, so the `core` can evolve without touching the rendering.
+The UI is meant to talk only to `GameService` and handle only the types from `Dto.hpp`, so the `core` can evolve without touching the rendering. The views already depend on `Dto.hpp` alone; the calls to `GameService` remain to be wired.

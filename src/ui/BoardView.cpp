@@ -1,4 +1,5 @@
 #include "ui/BoardView.hpp"
+#include <cmath>
 #include <iostream>
 
 BoardView::BoardView() {

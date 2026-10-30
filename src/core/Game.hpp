@@ -11,8 +11,10 @@ class Game {
 public:
     Game();
 
-    void                reset(Cell cell);
+    void                reset(Cell firstPlayer);
     MoveResult          play(Pos pos);
+    // Pour l'IA : le coup vient de generateCandidates, déjà vérifié.
+    void                playLegal(Pos pos);
     void                undo();
     bool                isLegalMove(Pos pos) const;
 
@@ -20,6 +22,7 @@ public:
     Cell                currentPlayer() const;
     int                 captureCount(Cell color) const;
     std::optional<Cell> winner() const;
+    std::optional<Pos>  pendingFive() const;
 
 private:
     struct State {
@@ -28,7 +31,12 @@ private:
         std::optional<Pos>  pendingFive;
     };
 
-    std::string         rejectionReason(Pos pos) const;
+    enum class MoveError { None, GameOver, Outside, Occupied, DoubleFreeThree };
+
+    MoveError           checkMove(Pos pos) const;
+    static const char*  describe(MoveError error);
+
+    std::vector<Pos>    applyMove(Pos pos);
 
     Board               board_;
     Cell                currentPlayer_;
