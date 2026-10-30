@@ -4,17 +4,35 @@ namespace {
 
     // Le sujet impose moins de 0,5 s en moyenne par coup.
     constexpr double SEARCH_TIME_LIMIT_MS = 500.0;
+    // Le sujet impose au moins 10 niveaux de profondeur.
+    constexpr int DEFAULT_DIFFICULTY = 10;
+
+    void resetStats(PlayerInfo& player) {
+        player.capturedStones = 0;
+        player.lastMoveTime = 0.0f;
+        player.lastMoveCoord = "-";
+    }
 }
 
-GameService::GameService() {
-    newGame(Mode::PvAI, Cell::Black);
-}
+GameService::GameService() : mode_(Mode::PvAI), difficulty_(DEFAULT_DIFFICULTY) {}
 
-void GameService::newGame(Mode mode, Cell humanColor) {
-    assert(humanColor != Cell::Empty && "newGame() : humanColor doit être Black ou White");
+void GameService::newGame(Mode mode, int difficulty, GameInfo& gameInfo) {
+    assert(difficulty > 0 && "newGame() : difficulty doit être une profondeur positive");
+    assert(gameInfo.p1Info.color != Cell::Empty && gameInfo.p2Info.color != Cell::Empty
+           && "newGame() : chaque joueur doit avoir une couleur");
+    assert(gameInfo.p1Info.color != gameInfo.p2Info.color && "newGame() : les deux joueurs ont la même couleur");
+
     mode_ = mode;
-    humanColor_ = humanColor;
+    difficulty_ = difficulty;
     game_.reset();
+
+    resetStats(gameInfo.p1Info);
+    resetStats(gameInfo.p2Info);
+
+    const bool tipsEnable = gameInfo.gameView.tipsEnable;
+    gameInfo.gameView = currentView();
+    gameInfo.gameView.gameStarted = true;
+    gameInfo.gameView.tipsEnable = tipsEnable;
 }
 
 MoveResult GameService::playMove(Pos pos) {
@@ -22,7 +40,7 @@ MoveResult GameService::playMove(Pos pos) {
 }
 
 MoveSuggestion GameService::suggestMove() {
-    return search_.findBestMove(game_, SEARCH_TIME_LIMIT_MS);
+    return search_.findBestMove(game_, difficulty_, SEARCH_TIME_LIMIT_MS);
 }
 // Est ce que c'est utiliser actuellement ? 
 GameView GameService::currentView() const {
