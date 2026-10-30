@@ -3,6 +3,7 @@
 #include "app/Dto.hpp"
 #include "core/Game.hpp"
 #include "core/ai/Search.hpp"
+#include <cassert>
 
 class GameService {
 public:

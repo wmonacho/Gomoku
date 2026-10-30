@@ -26,6 +26,7 @@ class MainMenu {
         void            renderHeader(const ImVec2& windowSize);
         void            renderModeButtons(const ImVec2& windowSize, GameInfo& gameInfo);
         void            renderOptions(const ImVec2& windowSize, GameInfo& gameInfo);
+        void            clearInfo(GameInfo& gameInfo);
 
         std::string                 m_selectedMode = "Undefined";
         ImFont*                     m_titleFont = nullptr;

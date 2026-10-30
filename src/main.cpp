@@ -58,7 +58,7 @@ int main() {
             if (event.type == sf::Event::Closed)
                 window.close();
             if (gameInfo.gameView.gameStarted) {
-                boardView.handleInput(event, window, gameInfo.gameView);
+                boardView.handleInput(event, window, gameInfo);
             }
         }
 

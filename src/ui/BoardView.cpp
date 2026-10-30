@@ -9,8 +9,8 @@ BoardView::BoardView() {
     }
 }
 
-void BoardView::handleInput(const sf::Event& event, const sf::RenderWindow& window, GameView& view) {
-    if (event.type != sf::Event::MouseButtonPressed || event.mouseButton.button != sf::Mouse::Left) {
+void BoardView::handleInput(const sf::Event& event, const sf::RenderWindow& window, GameInfo& gameInfo) {
+    if (event.type != sf::Event::MouseButtonPressed || event.mouseButton.button != sf::Mouse::Left || gameInfo.gameView.currentPlayer->isAI) {
         return;
     }
 
@@ -54,19 +54,110 @@ void BoardView::handleInput(const sf::Event& event, const sf::RenderWindow& wind
     int index = gridY * 19 + gridX;
 
     // Si la case est vide, on pose le pion
-    if (view.board[index] == Cell::Empty) {
-        view.board[index] = view.currentPlayer;
-        view.currentPlayer = view.currentPlayer == Cell::Black ? Cell::White : Cell::Black;
-        
-        // TODO Mise à jour de l'affichage du dernier coup
-        // std::string coordStr = std::to_string(gridX) + ":" + std::to_string(gridY);
-        // if (view.currentPlayer == Cell::Black) {
-        //     view.blackPlayer.lastMoveCoord = coordStr;
-        //     view.currentPlayer = Cell::White;
-        // } else {
-        //     view.whitePlayer.lastMoveCoord = coordStr;
-        //     view.currentPlayer = Cell::Black;
+    if (gameInfo.gameView.board[index] == Cell::Empty) {
+        gameInfo.gameView.board[index] = gameInfo.gameView.currentPlayer->color;
+        std::cout << "Index: " << index << std::endl;
+        // Update last move
+        std::string coordStr = std::to_string(gridX) + ":" + std::to_string(gridY);
+        gameInfo.gameView.currentPlayer->lastMoveCoord = coordStr; 
+
+        if (gameInfo.gameView.currentPlayer == &gameInfo.p1Info) {
+            gameInfo.gameView.currentPlayer = &gameInfo.p2Info;
+        } else {
+            gameInfo.gameView.currentPlayer = &gameInfo.p1Info;
+        }
+    }
+}
+
+void BoardView::renderVictoryPopup(const PlayerInfo& winner, char reason) {
+    std::cout << winner.name << " forfeited the match." << std::endl;
+    // 1. Traduction du char en texte pour la raison
+    std::string reasonStr;
+    switch (reason) {
+        case 'A':
+        case '5':
+            reasonStr = "align 5";
+            break;
+        case 'C':
+        case '1':
+            reasonStr = "10 captures";
+            break;
+        case 'F':
+            reasonStr = "forfeit";
+            break;
+        case 'T':
+            reasonStr = "timeout";
+            break;
+        default:
+            reasonStr = std::string(1, reason);
+            break;
+    }
+
+    // 2. Définition des textes à afficher
+    std::string line1 = winner.name + " WIN";
+    std::string line2 = "by " + reasonStr;
+
+    // 3. Configuration de la fenêtre modale
+    ImGui::OpenPopup("VictoryModal");
+
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(280.0f, 150.0f));
+
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar 
+                           | ImGuiWindowFlags_NoResize 
+                           | ImGuiWindowFlags_NoMove 
+                           | ImGuiWindowFlags_NoCollapse;
+
+    if (ImGui::BeginPopupModal("VictoryModal", nullptr, flags)) {
+        ImGui::Spacing();
+
+        // Ligne 1 : [PLAYER] WIN (centré)
+        float w1 = ImGui::CalcTextSize(line1.c_str()).x;
+        ImGui::SetCursorPosX((ImGui::GetWindowWidth() - w1) * 0.5f);
+        ImGui::Text("%s", line1.c_str());
+
+        // Ligne 2 : by [REASON] (centré)
+        float w2 = ImGui::CalcTextSize(line2.c_str()).x;
+        ImGui::SetCursorPosX((ImGui::GetWindowWidth() - w2) * 0.5f);
+        ImGui::Text("%s", line2.c_str());
+
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+        // Ligne 3 : (menu) (rejouer)
+        float btnWidth = 100.0f;
+        float btnHeight = 32.0f;
+        float spacing = 15.0f;
+        float totalWidth = (btnWidth * 2.0f) + spacing;
+
+        ImGui::SetCursorPosX((ImGui::GetWindowWidth() - totalWidth) * 0.5f);
+
+        // Bouton (menu)
+        if (ImGui::Button("menu", ImVec2(btnWidth, btnHeight))) {
+            // Réinitialise l'état pour retourner au menu
+            // m_gameInfo->gameView.board.fill(Cell::Empty);
+            // m_gameInfo->gameView.winner.reset();
+            // m_gameInfo->gameView.gameStarted = false;
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::SameLine(0.0f, spacing);
+
+        // Bouton (rejouer)
+        // if (ImGui::Button("rejouer", ImVec2(btnWidth, btnHeight))) {
+        //     // Relance directement une nouvelle partie
+        //     m_gameInfo->gameView.board.fill(Cell::Empty);
+        //     m_gameInfo->p1Info.capturedStones = 0;
+        //     m_gameInfo->p2Info.capturedStones = 0;
+        //     m_gameInfo->p1Info.lastMoveCoord = "-";
+        //     m_gameInfo->p2Info.lastMoveCoord = "-";
+        //     m_gameInfo->gameView.winner.reset();
+        //     m_gameInfo->gameView.currentPlayer = &m_gameInfo->p1Info;
+        //     ImGui::CloseCurrentPopup();
         // }
+
+        ImGui::EndPopup();
     }
 }
 
@@ -113,44 +204,16 @@ void BoardView::renderPlayerPanel(const std::string& panelId, const PlayerInfo& 
         ImGui::Separator();
     }
     // Bouton de forfait
-    if (ImGui::Button("Forfeit", ImVec2(-1.0f, 35.0f))) {
-        std::cout << player.name << " forfeited the match." << std::endl;
+    if (!player.isAI) {
+        if (ImGui::Button("Forfeit", ImVec2(-1.0f, 35.0f))) {
+            // std::cout << player.name << " forfeited the match." << std::endl;
+            renderVictoryPopup(player, 'F');
+        }
     }
 
     ImGui::End();
 }
 
-// void BoardView::renderBoard(sf::RenderWindow& window, const ImVec2& centerPos, float boardSize) {
-//     // 1. Fond en bois du plateau de Gomoku (Goban)
-//     sf::RectangleShape goban(sf::Vector2f(boardSize, boardSize));
-//     goban.setOrigin(boardSize * 0.5f, boardSize * 0.5f);
-//     goban.setPosition(centerPos.x, centerPos.y);
-//     goban.setFillColor(sf::Color(220, 179, 92)); // Teinte bois chaud
-//     goban.setOutlineThickness(3.0f);
-//     goban.setOutlineColor(sf::Color(40, 25, 10));
-//     window.draw(goban);
-
-//     // 2. Grille 19x19
-//     float startX = centerPos.x - (boardSize * 0.5f) + 20.0f;
-//     float startY = centerPos.y - (boardSize * 0.5f) + 20.0f;
-//     float step = (boardSize - 40.0f) / 18.0f;
-
-//     for (int i = 0; i < 19; ++i) {
-//         // Lignes horizontales
-//         sf::Vertex hLine[] = {
-//             sf::Vertex(sf::Vector2f(startX, startY + i * step), sf::Color::Black),
-//             sf::Vertex(sf::Vector2f(startX + 18 * step, startY + i * step), sf::Color::Black)
-//         };
-//         window.draw(hLine, 2, sf::Lines);
-
-//         // Lignes verticales
-//         sf::Vertex vLine[] = {
-//             sf::Vertex(sf::Vector2f(startX + i * step, startY), sf::Color::Black),
-//             sf::Vertex(sf::Vector2f(startX + i * step, startY + 18 * step), sf::Color::Black)
-//         };
-//         window.draw(vLine, 2, sf::Lines);
-//     }
-// }
 void BoardView::renderBoard(sf::RenderWindow& window, const ImVec2& centerPos, float boardSize, const GameView& view) {
     // 1. Fond en bois du plateau
     sf::RectangleShape goban(sf::Vector2f(boardSize, boardSize));
@@ -234,9 +297,57 @@ void BoardView::renderBoard(sf::RenderWindow& window, const ImVec2& centerPos, f
     }
 
     // Previsuatlisation des pierres
-    float stoneRadius = step * 0.42f;
-    sf::CircleShape stone(stoneRadius);
-    stone.setOrigin(stoneRadius, stoneRadius);
+    // test v2
+    static sf::Texture blackStoneTex;
+    static sf::Texture whiteStoneTex;
+    static bool texturesLoaded = false;
+
+    if (!texturesLoaded) {
+        const unsigned int size = 16;
+        const float radius = 7.0f;
+        const float center = 7.5f;
+
+        sf::Image blackImg;
+        sf::Image whiteImg;
+        blackImg.create(size, size, sf::Color::Transparent);
+        whiteImg.create(size, size, sf::Color::Transparent);
+
+        for (unsigned int y = 0; y < size; ++y) {
+            for (unsigned int x = 0; x < size; ++x) {
+                float dx = static_cast<float>(x) - center;
+                float dy = static_cast<float>(y) - center;
+                float dist = std::sqrt(dx * dx + dy * dy);
+
+                if (dist <= radius) {
+                    if (dist > radius - 1.2f) {
+                        blackImg.setPixel(x, y, sf::Color(10, 10, 10));
+                        whiteImg.setPixel(x, y, sf::Color(140, 140, 135));
+                    } else if (x >= 4 && x <= 6 && y >= 4 && y <= 6) {
+                        blackImg.setPixel(x, y, sf::Color(90, 90, 95));
+                        whiteImg.setPixel(x, y, sf::Color(255, 255, 255));
+                    } else {
+                        blackImg.setPixel(x, y, sf::Color(35, 35, 38));
+                        whiteImg.setPixel(x, y, sf::Color(220, 220, 215));
+                    }
+                }
+            }
+        }
+
+        blackStoneTex.loadFromImage(blackImg);
+        whiteStoneTex.loadFromImage(whiteImg);
+        blackStoneTex.setSmooth(false);
+        whiteStoneTex.setSmooth(false);
+
+        texturesLoaded = true;
+    }
+
+    // 7. Affichage des pions pixelisés
+    sf::Sprite stoneSprite;
+    stoneSprite.setOrigin(8.0f, 8.0f);
+
+    float targetDiameter = step * 0.85f;
+    float scale = targetDiameter / 16.0f;
+    stoneSprite.setScale(scale, scale);
 
     for (int y = 0; y < 19; ++y) {
         for (int x = 0; x < 19; ++x) {
@@ -247,19 +358,55 @@ void BoardView::renderBoard(sf::RenderWindow& window, const ImVec2& centerPos, f
                 continue;
             }
 
-            stone.setPosition(startX + x * step, startY + y * step);
-
             if (cell == Cell::Black) {
-                stone.setFillColor(sf::Color(20, 20, 20));
-                stone.setOutlineThickness(1.0f);
-                stone.setOutlineColor(sf::Color(60, 60, 60));
+                stoneSprite.setTexture(blackStoneTex);
             } else if (cell == Cell::White) {
-                stone.setFillColor(sf::Color(240, 240, 240));
-                stone.setOutlineThickness(1.0f);
-                stone.setOutlineColor(sf::Color(180, 180, 180));
+                stoneSprite.setTexture(whiteStoneTex);
             }
 
-            window.draw(stone);
+            stoneSprite.setPosition(startX + x * step, startY + y * step);
+            window.draw(stoneSprite);
+        }
+    }
+    // fin test v2
+    // 8. Prévisualisation sous le curseur (Ghost Stone)
+    if (!ImGui::GetIO().WantCaptureMouse && view.currentPlayer != nullptr && !view.currentPlayer->isAI) {
+        sf::Vector2i mousePixel = sf::Mouse::getPosition(window);
+        float mouseX = static_cast<float>(mousePixel.x);
+        float mouseY = static_cast<float>(mousePixel.y);
+
+        int hoverX = std::round((mouseX - startX) / step);
+        int hoverY = std::round((mouseY - startY) / step);
+
+        // Vérification des limites de la grille 19x19
+        if (hoverX >= 0 && hoverX < 19 && hoverY >= 0 && hoverY < 19) {
+            float targetX = startX + hoverX * step;
+            float targetY = startY + hoverY * step;
+
+            float distSq = (mouseX - targetX) * (mouseX - targetX) +
+                           (mouseY - targetY) * (mouseY - targetY);
+            float snapRadius = step * 0.45f;
+
+            int hoverIndex = hoverY * 19 + hoverX;
+
+            // Si la souris est proche du croisement et que la case est vide
+            if (distSq <= snapRadius * snapRadius && view.board[hoverIndex] == Cell::Empty) {
+                sf::Sprite ghostSprite;
+                ghostSprite.setOrigin(8.0f, 8.0f);
+                ghostSprite.setScale(scale, scale);
+
+                if (view.currentPlayer->color == Cell::Black) {
+                    ghostSprite.setTexture(blackStoneTex);
+                } else {
+                    ghostSprite.setTexture(whiteStoneTex);
+                }
+
+                // Opacité à ~50% pour marquer la prévisualisation
+                ghostSprite.setColor(sf::Color(255, 255, 255, 130));
+                ghostSprite.setPosition(targetX, targetY);
+
+                window.draw(ghostSprite);
+            }
         }
     }
 }

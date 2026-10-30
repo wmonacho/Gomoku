@@ -88,6 +88,19 @@ void MainMenu::renderHeader(const ImVec2& windowSize) {
     ImGui::Separator();
 }
 
+void MainMenu::clearInfo(GameInfo& gameInfo) {
+    gameInfo.gameView.board.fill(Cell::Empty);
+    gameInfo.p1Info.capturedStones = 0;
+    gameInfo.p1Info.lastMoveTime = 0.0f;
+    gameInfo.p1Info.lastMoveCoord = "-";
+
+    gameInfo.p2Info.capturedStones = 0;
+    gameInfo.p2Info.lastMoveTime = 0.0f;
+    gameInfo.p2Info.lastMoveCoord = "-";
+
+    gameInfo.gameView.gameStarted = true;
+}
+
 void MainMenu::renderModeButtons(const ImVec2& windowSize, GameInfo& gameInfo) {
     ImGuiStyle& style = ImGui::GetStyle();
 
@@ -108,33 +121,27 @@ void MainMenu::renderModeButtons(const ImVec2& windowSize, GameInfo& gameInfo) {
 
     if (ImGui::Button("Human vs AI", ImVec2(buttonWidth, buttonHeight))) {
         m_selectedMode = "Human vs AI";
-        gameInfo.gameView.gameStarted = true;
         gameInfo.p1Info.isAI = false;
         gameInfo.p2Info.isAI = true;
-        // clear le board
-        gameInfo.gameView.board.fill(Cell::Empty);
+        MainMenu::clearInfo(gameInfo);
     }
 
     ImGui::SameLine();
 
     if (ImGui::Button("Human vs Human", ImVec2(buttonWidth, buttonHeight))) {
         m_selectedMode = "Human vs Human";
-        gameInfo.gameView.gameStarted = true;
         gameInfo.p1Info.isAI = false;
         gameInfo.p2Info.isAI = false;
-        // clear le board
-        gameInfo.gameView.board.fill(Cell::Empty);
+        MainMenu::clearInfo(gameInfo);
     }
 
     ImGui::SameLine();
 
     if (ImGui::Button("AI vs AI", ImVec2(buttonWidth, buttonHeight))) {
         m_selectedMode = "AI vs AI";
-        gameInfo.gameView.gameStarted = true;
         gameInfo.p1Info.isAI = true;
         gameInfo.p2Info.isAI = true;
-        // clear le board
-        gameInfo.gameView.board.fill(Cell::Empty);
+        MainMenu::clearInfo(gameInfo);
     }
 
     ImGui::Spacing();

@@ -12,7 +12,7 @@ public:
     ~BoardView() = default;
 
     void render(sf::RenderWindow& window, GameInfo& gameInfo);
-    void handleInput(const sf::Event& event, const sf::RenderWindow& window, GameView& view);
+    void handleInput(const sf::Event& event, const sf::RenderWindow& window, GameInfo& gameInfo);
 
 private:
     void renderPlayerPanel(const std::string& panelId, const PlayerInfo& player, 
@@ -21,4 +21,5 @@ private:
     void renderBottomControls(const ImVec2& windowSize, GameView& view);
     sf::Font m_font;
     bool m_fontLoaded = false;
+    void renderVictoryPopup(const PlayerInfo& winner, char reason); 
 };

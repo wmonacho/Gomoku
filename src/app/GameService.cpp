@@ -1,7 +1,5 @@
 #include "app/GameService.hpp"
 
-#include <cassert>
-
 namespace {
 
     // Le sujet impose moins de 0,5 s en moyenne par coup.
@@ -26,16 +24,17 @@ MoveResult GameService::playMove(Pos pos) {
 MoveSuggestion GameService::suggestMove() {
     return search_.findBestMove(game_, SEARCH_TIME_LIMIT_MS);
 }
-
+// Est ce que c'est utiliser actuellement ? 
 GameView GameService::currentView() const {
     GameView view;
     for (int y = 0; y < BOARD_SIZE; y++)
         for (int x = 0; x < BOARD_SIZE; x++)
             view.board[y * BOARD_SIZE + x] = game_.board().at({x, y});
-    view.currentPlayer = game_.currentPlayer();
+    // view.currentPlayer = game_.currentPlayer();
+    // view.currentPlayer = (game_.currentPlayer() == Cell::Black) ? &gameInfo.p1Info : &gameInfo.p2Info;
     // view.blackCaptureCount = game_.captureCount(Cell::Black); 
     // view.whiteCaptureCount = game_.captureCount(Cell::White);
-    view.winner = game_.winner();
+    // view.winner = game_.winner();
     return view;
 }
 
