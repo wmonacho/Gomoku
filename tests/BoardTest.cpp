@@ -156,6 +156,111 @@ namespace {
         }
     }
 
+    bool checkHashConsistent(const Board& board) {
+        const bool consistent = board.hash() == board.computeHashFromScratch();
+        CHECK(consistent);
+        return consistent;
+    }
+
+    // Compare le hash incrémental au recalcul complet après chaque place, capture et undo.
+    // On s'arrête au premier écart : c'est l'opération qui a faussé le hash.
+    void testHashStaysConsistentAfterEveryOperation() {
+        std::mt19937 rng(1234);
+        Board board;
+
+        for (int round = 0; round < 50; round++) {
+            int played = 0;
+            Cell color = Cell::Black;
+            for (int i = 0; i < 150; i++) {
+                const Pos pos = {static_cast<int>(rng() % BOARD_SIZE), static_cast<int>(rng() % BOARD_SIZE)};
+                if (board.at(pos) != Cell::Empty)
+                    continue;
+                board.place(pos, color);
+                if (!checkHashConsistent(board))
+                    return;
+
+                for (Pos direction : DIRECTIONS) {
+                    for (int sign : {1, -1}) {
+                        const Pos neighbor = step(pos, direction, sign);
+                        if (board.isInside(neighbor) && board.at(neighbor) == opponent(color)
+                            && board.captureCount(color) < 10 && rng() % 3 == 0) {
+                            board.capture(neighbor);
+                            if (!checkHashConsistent(board))
+                                return;
+                        }
+                    }
+                }
+                color = opponent(color);
+                played++;
+            }
+
+            for (int i = 0; i < played; i++) {
+                board.undo();
+                if (!checkHashConsistent(board))
+                    return;
+            }
+        }
+    }
+
+    // Transposition : les mêmes coups joués dans un autre ordre donnent la même position, donc le même hash.
+    void testHashIgnoresMoveOrder() {
+        Board firstOrder;
+        firstOrder.place({3, 3}, Cell::Black);
+        firstOrder.place({10, 4}, Cell::White);
+        firstOrder.place({7, 12}, Cell::Black);
+        firstOrder.place({0, 18}, Cell::White);
+
+        Board secondOrder;
+        secondOrder.place({7, 12}, Cell::Black);
+        secondOrder.place({0, 18}, Cell::White);
+        secondOrder.place({3, 3}, Cell::Black);
+        secondOrder.place({10, 4}, Cell::White);
+
+        CHECK(firstOrder.hash() == secondOrder.hash());
+        CHECK(firstOrder.hash() == firstOrder.computeHashFromScratch());
+
+        // Un seul ordre différent suffit à changer la position (et donc le hash) si une pierre change de couleur.
+        Board swappedColors;
+        swappedColors.place({10, 4}, Cell::Black);
+        swappedColors.place({3, 3}, Cell::White);
+        swappedColors.place({7, 12}, Cell::Black);
+        swappedColors.place({0, 18}, Cell::White);
+        CHECK(swappedColors.hash() != firstOrder.hash());
+    }
+
+    // Un coup qui capture dans deux directions : l'ordre des captures ne doit pas changer le hash.
+    void testHashIgnoresCaptureOrder() {
+        auto setUpDoubleCapture = [](Board& board) {
+            board.place({8, 5}, Cell::Black);
+            board.place({6, 5}, Cell::White);
+            board.place({5, 8}, Cell::Black);
+            board.place({7, 5}, Cell::White);
+            board.place({0, 0}, Cell::Black);
+            board.place({5, 6}, Cell::White);
+            board.place({0, 1}, Cell::Black);
+            board.place({5, 7}, Cell::White);
+            board.place({5, 5}, Cell::Black);
+        };
+
+        Board rightThenDown;
+        setUpDoubleCapture(rightThenDown);
+        rightThenDown.capture({6, 5});
+        rightThenDown.capture({7, 5});
+        rightThenDown.capture({5, 6});
+        rightThenDown.capture({5, 7});
+
+        Board downThenRight;
+        setUpDoubleCapture(downThenRight);
+        downThenRight.capture({5, 7});
+        downThenRight.capture({5, 6});
+        downThenRight.capture({7, 5});
+        downThenRight.capture({6, 5});
+
+        CHECK(rightThenDown.captureCount(Cell::Black) == 4);
+        CHECK(rightThenDown.hash() == downThenRight.hash());
+        CHECK(rightThenDown.hash() == rightThenDown.computeHashFromScratch());
+    }
+
     // Critère du ticket : aucune allocation dans place / capture / undo.
     void testNoAllocationInPlaceCaptureUndo() {
         std::mt19937 rng(7);
@@ -183,6 +288,9 @@ int main() {
     TestRunner::run("le hash dépend du trait", testHashDependsOnSideToMove);
     TestRunner::run("le hash dépend des captures", testHashDependsOnCaptureCount);
     TestRunner::run("place/undo de N coups restaure l'état et le hash", testPlaceThenUndoRestoresStartState);
+    TestRunner::run("hash cohérent après chaque place/capture/undo", testHashStaysConsistentAfterEveryOperation);
+    TestRunner::run("transposition : l'ordre des coups ne change pas le hash", testHashIgnoresMoveOrder);
+    TestRunner::run("l'ordre des captures ne change pas le hash", testHashIgnoresCaptureOrder);
     TestRunner::run("aucune allocation dans place/capture/undo", testNoAllocationInPlaceCaptureUndo);
 
     return TestRunner::finish();

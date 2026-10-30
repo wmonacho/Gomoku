@@ -1,4 +1,4 @@
-NAME        = gomoku
+NAME        = Gomoku
 
 # Compilateur et flags
 CXX         = c++
@@ -50,7 +50,7 @@ re: fclean all
 # Tests du moteur : seulement core/, sans SFML. Chaque tests/*Test.cpp donne un binaire.
 TEST_DIR     = $(OBJ_DIR)/tests
 TEST_BINS    = $(patsubst tests/%.cpp,$(TEST_DIR)/%,$(wildcard tests/*Test.cpp))
-TEST_SUPPORT = tests/support/TestRunner.cpp
+TEST_SUPPORT = $(wildcard tests/support/*.cpp)
 CORE_SRCS    = $(filter src/core/%,$(SRCS))
 
 $(TEST_DIR)/%: tests/%.cpp $(TEST_SUPPORT) $(CORE_SRCS)
