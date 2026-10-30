@@ -56,7 +56,7 @@ void BoardView::handleInput(const sf::Event& event, const sf::RenderWindow& wind
     // Si la case est vide, on pose le pion
     if (gameInfo.gameView.board[index] == Cell::Empty) {
         gameInfo.gameView.board[index] = gameInfo.gameView.currentPlayer->color;
-        std::cout << "Index: " << index << std::endl;
+        // std::cout << "Index: " << index << std::endl;
         // Update last move
         std::string coordStr = std::to_string(gridX) + ":" + std::to_string(gridY);
         gameInfo.gameView.currentPlayer->lastMoveCoord = coordStr; 
