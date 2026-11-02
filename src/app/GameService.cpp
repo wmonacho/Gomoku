@@ -1,5 +1,5 @@
 #include "app/GameService.hpp"
-
+#include <iostream>
 namespace {
 
     // Le sujet impose moins de 0,5 s en moyenne par coup.
@@ -24,15 +24,16 @@ void GameService::newGame(Mode mode, int difficulty, GameInfo& gameInfo) {
 
     mode_ = mode;
     difficulty_ = difficulty;
-    game_.reset();
+    game_.reset(gameInfo.gameView.currentPlayer->color);
 
     resetStats(gameInfo.p1Info);
     resetStats(gameInfo.p2Info);
 
     const bool tipsEnable = gameInfo.gameView.tipsEnable;
-    gameInfo.gameView = currentView();
-    gameInfo.gameView.gameStarted = true;
+    gameInfo.gameView.board.fill(Cell::Empty);
+
     gameInfo.gameView.tipsEnable = tipsEnable;
+    gameInfo.gameView.gameStarted = true;
 }
 
 MoveResult GameService::playMove(Pos pos) {
@@ -48,10 +49,7 @@ GameView GameService::currentView() const {
     for (int y = 0; y < BOARD_SIZE; y++)
         for (int x = 0; x < BOARD_SIZE; x++)
             view.board[y * BOARD_SIZE + x] = game_.board().at({x, y});
-    // view.currentPlayer = game_.currentPlayer();
-    // view.currentPlayer = (game_.currentPlayer() == Cell::Black) ? &gameInfo.p1Info : &gameInfo.p2Info;
-    // view.blackCaptureCount = game_.captureCount(Cell::Black); 
-    // view.whiteCaptureCount = game_.captureCount(Cell::White);
+
     // view.winner = game_.winner();
     return view;
 }

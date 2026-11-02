@@ -5,6 +5,7 @@
 #include <string>
 #include "../app/Dto.hpp"
 #include <cmath>
+#include "app/GameService.hpp"
 
 class BoardView {
 public:
@@ -12,7 +13,7 @@ public:
     ~BoardView() = default;
 
     void render(sf::RenderWindow& window, GameInfo& gameInfo);
-    void handleInput(const sf::Event& event, const sf::RenderWindow& window, GameInfo& gameInfo);
+    void handleInput(const sf::Event& event, const sf::RenderWindow& window, GameInfo& gameInfo, GameService& gameService);
 
 private:
     void renderPlayerPanel(const std::string& panelId, const PlayerInfo& player, 

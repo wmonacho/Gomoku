@@ -3,12 +3,12 @@
 #include "core/Rules.hpp"
 
 Game::Game() {
-    reset();
+    reset(Cell::Empty);
 }
 
-void Game::reset() {
+void Game::reset(Cell cell) {
     board_ = Board();
-    currentPlayer_ = Cell::Black;
+    currentPlayer_ = cell;
     winner_ = std::nullopt;
 
     pendingFive_ = std::nullopt;

@@ -11,7 +11,7 @@ class Game {
 public:
     Game();
 
-    void                reset();
+    void                reset(Cell cell);
     MoveResult          play(Pos pos);
     void                undo();
     bool                isLegalMove(Pos pos) const;

@@ -9,6 +9,7 @@
 #include <sstream>
 #include <vector>
 #include "../app/Dto.hpp"
+#include "../app/GameService.hpp"
 
 class MainMenu {
     public:
@@ -16,19 +17,19 @@ class MainMenu {
         ~MainMenu();
 
         void            setTitleFont(ImFont* font);
-        void            render(sf::RenderWindow& window, GameInfo& gameInfo);
+        void            render(sf::RenderWindow& window, GameInfo& gameInfo, GameService& gameService);
         bool            isTipsEnabled() const;
-        std::string     getSelectedMode() const;
+        Mode            getSelectedMode() const;
         bool            loadBackgroundFrames(int totalFrames = 60);
 
     private:
         void            renderBackground(sf::RenderWindow& window);
         void            renderHeader(const ImVec2& windowSize);
-        void            renderModeButtons(const ImVec2& windowSize, GameInfo& gameInfo);
+        void            renderModeButtons(const ImVec2& windowSize, GameInfo& gameInfo, GameService& gameService);
         void            renderOptions(const ImVec2& windowSize, GameInfo& gameInfo);
         void            clearInfo(GameInfo& gameInfo);
 
-        std::string                 m_selectedMode = "Undefined";
+        Mode                        m_selectedMode;
         ImFont*                     m_titleFont = nullptr;
         std::vector<sf::Texture>    m_bgTextures{};
         sf::Sprite                  m_bgSprite{};

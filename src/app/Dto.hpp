@@ -51,7 +51,7 @@ struct GameView {
     std::array<Cell, BOARD_CELLS> board{};  // index = y * BOARD_SIZE + x
     // Cell                          currentPlayer = Cell::Black;
     PlayerInfo*                   currentPlayer = nullptr;
-    std::optional<Cell>           winner;  // vide tant que la partie continue
+    // std::optional<Cell>           winner;  // vide tant que la partie continue
     bool                          gameStarted = false;
     bool                          tipsEnable = false;
 };

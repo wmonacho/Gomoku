@@ -9,12 +9,17 @@ BoardView::BoardView() {
     }
 }
 
-void BoardView::handleInput(const sf::Event& event, const sf::RenderWindow& window, GameInfo& gameInfo) {
-    if (event.type != sf::Event::MouseButtonPressed || event.mouseButton.button != sf::Mouse::Left || gameInfo.gameView.currentPlayer->isAI) {
+void BoardView::handleInput(const sf::Event& event, const sf::RenderWindow& window, 
+                         GameInfo& gameInfo, GameService& gameService) {
+    if (event.type != sf::Event::MouseButtonPressed || event.mouseButton.button != sf::Mouse::Left) {
         return;
     }
 
-    // Ignore le clic si la souris survole une fenêtre ImGui (les panneaux latéraux)
+    if (gameInfo.gameView.currentPlayer == nullptr || gameInfo.gameView.currentPlayer->isAI) {
+        return;
+    }
+
+    // Ignore le clic si la souris survole une fenêtre ImGui
     if (ImGui::GetIO().WantCaptureMouse) {
         return;
     }
@@ -31,16 +36,13 @@ void BoardView::handleInput(const sf::Event& event, const sf::RenderWindow& wind
     float mouseX = static_cast<float>(event.mouseButton.x);
     float mouseY = static_cast<float>(event.mouseButton.y);
 
-    // Calcul de l'intersection la plus proche
     int gridX = std::round((mouseX - startX) / step);
     int gridY = std::round((mouseY - startY) / step);
 
-    // Vérifie qu'on est bien sur la grille 19x19
     if (gridX < 0 || gridX >= 19 || gridY < 0 || gridY >= 19) {
         return;
     }
 
-    // Vérifie que le clic est suffisamment proche du croisement (rayon de tolérance)
     float intersectionX = startX + gridX * step;
     float intersectionY = startY + gridY * step;
     float distSq = (mouseX - intersectionX) * (mouseX - intersectionX) +
@@ -51,21 +53,34 @@ void BoardView::handleInput(const sf::Event& event, const sf::RenderWindow& wind
         return;
     }
 
-    int index = gridY * 19 + gridX;
+    // Appel au moteur de jeu
+    Pos targetPos{gridX, gridY};
+    MoveResult result = gameService.playMove(targetPos);
 
-    // Si la case est vide, on pose le pion
-    if (gameInfo.gameView.board[index] == Cell::Empty) {
-        gameInfo.gameView.board[index] = gameInfo.gameView.currentPlayer->color;
-        // std::cout << "Index: " << index << std::endl;
-        // Update last move
+    if (result.isLegal) {
+        // Enregistre le dernier coup pour le joueur actif 
         std::string coordStr = std::to_string(gridX) + ":" + std::to_string(gridY);
-        gameInfo.gameView.currentPlayer->lastMoveCoord = coordStr; 
+        gameInfo.gameView.currentPlayer->lastMoveCoord = coordStr;
 
+        // Met à jour le nombre de captures du joueur actif s'il y en a eu
+        if (!result.captured.empty()) {
+            gameInfo.gameView.currentPlayer->capturedStones += static_cast<int>(result.captured.size());
+        }
+
+        // Synchronise le plateau complet (prend en compte le coup et les pions capturés retirés)
+        GameView updatedView = gameService.currentView();
+        gameInfo.gameView.board = updatedView.board;
+        // gameInfo.gameView.winner = updatedView.winner;
+
+        // Alterne le joueur actif
         if (gameInfo.gameView.currentPlayer == &gameInfo.p1Info) {
             gameInfo.gameView.currentPlayer = &gameInfo.p2Info;
         } else {
             gameInfo.gameView.currentPlayer = &gameInfo.p1Info;
         }
+    } else {
+        std::cout << "Coup illegal (" << gridX << ", " << gridY << ") : " 
+                  << result.rejectionReason << std::endl;
     }
 }
 

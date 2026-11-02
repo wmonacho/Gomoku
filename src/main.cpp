@@ -37,6 +37,7 @@ int main() {
     MainMenu menu;
     BoardView boardView;
     GameInfo gameInfo;
+    GameService gameService;
     if (!menu.loadBackgroundFrames(60)) {
         return -1;
     }
@@ -58,7 +59,7 @@ int main() {
             if (event.type == sf::Event::Closed)
                 window.close();
             if (gameInfo.gameView.gameStarted) {
-                boardView.handleInput(event, window, gameInfo);
+                boardView.handleInput(event, window, gameInfo, gameService);
             }
         }
 
@@ -66,7 +67,7 @@ int main() {
         window.clear(sf::Color(30, 30, 30));
 
         if (!gameInfo.gameView.gameStarted) {
-            menu.render(window, gameInfo);
+            menu.render(window, gameInfo, gameService);
         } else {
             boardView.render(window, gameInfo);
         }

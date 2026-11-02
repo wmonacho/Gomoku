@@ -88,20 +88,20 @@ void MainMenu::renderHeader(const ImVec2& windowSize) {
     ImGui::Separator();
 }
 
-void MainMenu::clearInfo(GameInfo& gameInfo) {
-    gameInfo.gameView.board.fill(Cell::Empty);
-    gameInfo.p1Info.capturedStones = 0;
-    gameInfo.p1Info.lastMoveTime = 0.0f;
-    gameInfo.p1Info.lastMoveCoord = "-";
+// void MainMenu::clearInfo(GameInfo& gameInfo) {
+//     gameInfo.gameView.board.fill(Cell::Empty);
+//     gameInfo.p1Info.capturedStones = 0;
+//     gameInfo.p1Info.lastMoveTime = 0.0f;
+//     gameInfo.p1Info.lastMoveCoord = "-";
 
-    gameInfo.p2Info.capturedStones = 0;
-    gameInfo.p2Info.lastMoveTime = 0.0f;
-    gameInfo.p2Info.lastMoveCoord = "-";
+//     gameInfo.p2Info.capturedStones = 0;
+//     gameInfo.p2Info.lastMoveTime = 0.0f;
+//     gameInfo.p2Info.lastMoveCoord = "-";
 
-    gameInfo.gameView.gameStarted = true;
-}
+//     gameInfo.gameView.gameStarted = true;
+// }
 
-void MainMenu::renderModeButtons(const ImVec2& windowSize, GameInfo& gameInfo) {
+void MainMenu::renderModeButtons(const ImVec2& windowSize, GameInfo& gameInfo, GameService& gameService) {
     ImGuiStyle& style = ImGui::GetStyle();
 
     const char* instructionText = "Choose a game mode:";
@@ -120,28 +120,31 @@ void MainMenu::renderModeButtons(const ImVec2& windowSize, GameInfo& gameInfo) {
     ImGui::SetCursorPosX((windowSize.x - totalButtonsWidth) * 0.5f);
 
     if (ImGui::Button("Human vs AI", ImVec2(buttonWidth, buttonHeight))) {
-        m_selectedMode = "Human vs AI";
+        m_selectedMode = Mode::PvAI;
         gameInfo.p1Info.isAI = false;
         gameInfo.p2Info.isAI = true;
-        MainMenu::clearInfo(gameInfo);
+        gameService.newGame(m_selectedMode, 1, gameInfo);
+        // MainMenu::clearInfo(gameInfo);
     }
 
     ImGui::SameLine();
 
     if (ImGui::Button("Human vs Human", ImVec2(buttonWidth, buttonHeight))) {
-        m_selectedMode = "Human vs Human";
+        m_selectedMode = Mode::PvP;
         gameInfo.p1Info.isAI = false;
         gameInfo.p2Info.isAI = false;
-        MainMenu::clearInfo(gameInfo);
+        gameService.newGame(m_selectedMode, 1, gameInfo);
+        // MainMenu::clearInfo(gameInfo);
     }
 
     ImGui::SameLine();
 
     if (ImGui::Button("AI vs AI", ImVec2(buttonWidth, buttonHeight))) {
-        m_selectedMode = "AI vs AI";
+        m_selectedMode = Mode::AIvAI;
         gameInfo.p1Info.isAI = true;
         gameInfo.p2Info.isAI = true;
-        MainMenu::clearInfo(gameInfo);
+        gameService.newGame(m_selectedMode, 1, gameInfo);
+        // MainMenu::clearInfo(gameInfo);
     }
 
     ImGui::Spacing();
@@ -163,7 +166,7 @@ void MainMenu::renderOptions(const ImVec2& windowSize, GameInfo& gameInfo) {
     ImGui::Separator();
 }
 
-void MainMenu::render(sf::RenderWindow& window, GameInfo& gameInfo) {
+void MainMenu::render(sf::RenderWindow& window, GameInfo& gameInfo, GameService& gameService) {
     // 1. Fond SFML
     renderBackground(window);
 
@@ -183,12 +186,12 @@ void MainMenu::render(sf::RenderWindow& window, GameInfo& gameInfo) {
     ImVec2 windowSize = ImGui::GetWindowSize();
 
     renderHeader(windowSize);
-    renderModeButtons(windowSize, gameInfo);
+    renderModeButtons(windowSize, gameInfo, gameService);
     renderOptions(windowSize, gameInfo);
 
     ImGui::End();
 }
 
-std::string MainMenu::getSelectedMode() const {
+Mode MainMenu::getSelectedMode() const {
     return m_selectedMode;
 }
