@@ -3,7 +3,8 @@
 #include "app/Dto.hpp"
 #include "core/Game.hpp"
 #include "core/ai/Search.hpp"
-#include <cassert>
+// #include <cassert>
+#include <random>
 
 class GameService {
 public:

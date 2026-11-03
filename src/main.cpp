@@ -69,7 +69,7 @@ int main() {
         if (!gameInfo.gameView.gameStarted) {
             menu.render(window, gameInfo, gameService);
         } else {
-            boardView.render(window, gameInfo);
+            boardView.render(window, gameInfo, gameService);
         }
 
         ImGui::SFML::Render(window);

@@ -5,6 +5,7 @@
 #include <optional>
 #include <string>
 #include <vector>
+// #include "GameService.hpp"
 
 constexpr int BOARD_SIZE = 19;
 constexpr int BOARD_CELLS = BOARD_SIZE * BOARD_SIZE;
@@ -49,9 +50,8 @@ struct PlayerInfo {
 
 struct GameView {
     std::array<Cell, BOARD_CELLS> board{};  // index = y * BOARD_SIZE + x
-    // Cell                          currentPlayer = Cell::Black;
     PlayerInfo*                   currentPlayer = nullptr;
-    // std::optional<Cell>           winner;  // vide tant que la partie continue
+    std::optional<Cell>           winner;  // vide tant que la partie continue
     bool                          gameStarted = false;
     bool                          tipsEnable = false;
 };
@@ -60,8 +60,4 @@ struct GameInfo {
     GameView gameView;
     PlayerInfo p1Info{"Player 1 (Black)", false, 0, 0.0f, "-", Cell::Black};
     PlayerInfo p2Info{"Player 2 (White)", false, 0, 0.0f, "-", Cell::White};
-
-    GameInfo() {
-        gameView.currentPlayer = &p1Info;
-    }
 };

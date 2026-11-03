@@ -12,15 +12,20 @@ public:
     BoardView();
     ~BoardView() = default;
 
-    void render(sf::RenderWindow& window, GameInfo& gameInfo);
+    void render(sf::RenderWindow& window, GameInfo& gameInfo, GameService& gameService);
     void handleInput(const sf::Event& event, const sf::RenderWindow& window, GameInfo& gameInfo, GameService& gameService);
 
 private:
     void renderPlayerPanel(const std::string& panelId, const PlayerInfo& player, 
-                           bool isLeft, const ImVec2& windowSize, bool tipsEnable);
+                           bool isLeft, const ImVec2& windowSize, bool tipsEnable, GameInfo& gameInfo);
     void renderBoard(sf::RenderWindow& window, const ImVec2& centerPos, float boardSize, const GameView& view);
     void renderBottomControls(const ImVec2& windowSize, GameView& view);
+    void renderVictoryPopup(const PlayerInfo& winner, char reason, GameInfo& gameInfo); 
+
     sf::Font m_font;
     bool m_fontLoaded = false;
-    void renderVictoryPopup(const PlayerInfo& winner, char reason); 
+
+    bool m_showVictoryPopup = false;
+    const PlayerInfo* m_winnerInfo = nullptr;
+    char m_victoryReason = ' ';
 };

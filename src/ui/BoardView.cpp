@@ -84,36 +84,23 @@ void BoardView::handleInput(const sf::Event& event, const sf::RenderWindow& wind
     }
 }
 
-void BoardView::renderVictoryPopup(const PlayerInfo& winner, char reason) {
-    std::cout << winner.name << " forfeited the match." << std::endl;
-    // 1. Traduction du char en texte pour la raison
+void BoardView::renderVictoryPopup(const PlayerInfo& winner, char reason, GameInfo& gameInfo) {
+    if (m_showVictoryPopup) {
+        ImGui::OpenPopup("VictoryModal");
+    }
     std::string reasonStr;
     switch (reason) {
         case 'A':
-        case '5':
-            reasonStr = "align 5";
-            break;
+        case '5': reasonStr = "align 5"; break;
         case 'C':
-        case '1':
-            reasonStr = "10 captures";
-            break;
-        case 'F':
-            reasonStr = "forfeit";
-            break;
-        case 'T':
-            reasonStr = "timeout";
-            break;
-        default:
-            reasonStr = std::string(1, reason);
-            break;
+        case '1': reasonStr = "10 captures"; break;
+        case 'F': reasonStr = "forfeit"; break;
+        case 'T': reasonStr = "timeout"; break;
+        default:  reasonStr = std::string(1, reason); break;
     }
 
-    // 2. Définition des textes à afficher
     std::string line1 = winner.name + " WIN";
     std::string line2 = "by " + reasonStr;
-
-    // 3. Configuration de la fenêtre modale
-    ImGui::OpenPopup("VictoryModal");
 
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
@@ -127,12 +114,10 @@ void BoardView::renderVictoryPopup(const PlayerInfo& winner, char reason) {
     if (ImGui::BeginPopupModal("VictoryModal", nullptr, flags)) {
         ImGui::Spacing();
 
-        // Ligne 1 : [PLAYER] WIN (centré)
         float w1 = ImGui::CalcTextSize(line1.c_str()).x;
         ImGui::SetCursorPosX((ImGui::GetWindowWidth() - w1) * 0.5f);
         ImGui::Text("%s", line1.c_str());
 
-        // Ligne 2 : by [REASON] (centré)
         float w2 = ImGui::CalcTextSize(line2.c_str()).x;
         ImGui::SetCursorPosX((ImGui::GetWindowWidth() - w2) * 0.5f);
         ImGui::Text("%s", line2.c_str());
@@ -140,7 +125,6 @@ void BoardView::renderVictoryPopup(const PlayerInfo& winner, char reason) {
         ImGui::Spacing();
         ImGui::Spacing();
 
-        // Ligne 3 : (menu) (rejouer)
         float btnWidth = 100.0f;
         float btnHeight = 32.0f;
         float spacing = 15.0f;
@@ -150,34 +134,36 @@ void BoardView::renderVictoryPopup(const PlayerInfo& winner, char reason) {
 
         // Bouton (menu)
         if (ImGui::Button("menu", ImVec2(btnWidth, btnHeight))) {
-            // Réinitialise l'état pour retourner au menu
-            // m_gameInfo->gameView.board.fill(Cell::Empty);
-            // m_gameInfo->gameView.winner.reset();
-            // m_gameInfo->gameView.gameStarted = false;
+            gameInfo.gameView.board.fill(Cell::Empty);
+            // gameInfo.gameView.winner.reset();
+            gameInfo.gameView.gameStarted = false;
+            m_winnerInfo = nullptr;
+            m_showVictoryPopup = false;
             ImGui::CloseCurrentPopup();
         }
 
         ImGui::SameLine(0.0f, spacing);
 
         // Bouton (rejouer)
-        // if (ImGui::Button("rejouer", ImVec2(btnWidth, btnHeight))) {
-        //     // Relance directement une nouvelle partie
-        //     m_gameInfo->gameView.board.fill(Cell::Empty);
-        //     m_gameInfo->p1Info.capturedStones = 0;
-        //     m_gameInfo->p2Info.capturedStones = 0;
-        //     m_gameInfo->p1Info.lastMoveCoord = "-";
-        //     m_gameInfo->p2Info.lastMoveCoord = "-";
-        //     m_gameInfo->gameView.winner.reset();
-        //     m_gameInfo->gameView.currentPlayer = &m_gameInfo->p1Info;
-        //     ImGui::CloseCurrentPopup();
-        // }
-
+        if (ImGui::Button("rejouer", ImVec2(btnWidth, btnHeight))) {
+            gameInfo.gameView.board.fill(Cell::Empty);
+            gameInfo.p1Info.capturedStones = 0;
+            gameInfo.p2Info.capturedStones = 0;
+            gameInfo.p1Info.lastMoveCoord = "-";
+            gameInfo.p2Info.lastMoveCoord = "-";
+            // gameInfo.gameView.winner.reset(); 
+            gameInfo.gameView.currentPlayer = &gameInfo.p1Info;
+            m_winnerInfo = nullptr;
+            m_showVictoryPopup = false; 
+            ImGui::CloseCurrentPopup();
+        }
+ 
         ImGui::EndPopup();
     }
 }
 
 void BoardView::renderPlayerPanel(const std::string& panelId, const PlayerInfo& player, 
-                                 bool isLeft, const ImVec2& windowSize, bool tipsEnable) {
+                                 bool isLeft, const ImVec2& windowSize, bool tipsEnable, GameInfo& gameInfo) {
     float panelWidth = 280.0f;
     float panelHeight = windowSize.y - 40.0f;
     float posX = isLeft ? 20.0f : (windowSize.x - panelWidth - 20.0f);
@@ -211,18 +197,22 @@ void BoardView::renderPlayerPanel(const std::string& panelId, const PlayerInfo& 
     ImGui::Separator();
     ImGui::Spacing();
 
-    //TODO Remplit le best move
     if (tipsEnable & !player.isAI) {
         ImGui::Spacing();
         ImGui::Text("Next best move : ");
         ImGui::Spacing();
         ImGui::Separator();
     }
+
     // Bouton de forfait
     if (!player.isAI) {
         if (ImGui::Button("Forfeit", ImVec2(-1.0f, 35.0f))) {
-            // std::cout << player.name << " forfeited the match." << std::endl;
-            renderVictoryPopup(player, 'F');
+            if (player.color == gameInfo.p1Info.color)
+                m_winnerInfo = &gameInfo.p2Info;
+            else
+                m_winnerInfo = &gameInfo.p1Info;
+            m_victoryReason = 'F';
+            m_showVictoryPopup = true;
         }
     }
 
@@ -445,7 +435,7 @@ void BoardView::renderBottomControls(const ImVec2& windowSize, GameView& view) {
     ImGui::End();
 }
 
-void BoardView::render(sf::RenderWindow& window, GameInfo& gameInfo) {
+void BoardView::render(sf::RenderWindow& window, GameInfo& gameInfo, GameService& gameService) {
     ImVec2 windowSize(static_cast<float>(window.getSize().x), 
                       static_cast<float>(window.getSize().y));
 
@@ -453,9 +443,13 @@ void BoardView::render(sf::RenderWindow& window, GameInfo& gameInfo) {
     renderBoard(window, ImVec2(windowSize.x * 0.5f, windowSize.y * 0.44f), 640.0f, gameInfo.gameView);
 
     // 2. Panneaux latéraux ImGui
-    renderPlayerPanel("BlackPlayerPanel", gameInfo.p1Info, true, windowSize, gameInfo.gameView.tipsEnable);
-    renderPlayerPanel("WhitePlayerPanel", gameInfo.p2Info, false, windowSize, gameInfo.gameView.tipsEnable);
+    renderPlayerPanel("BlackPlayerPanel", gameInfo.p1Info, true, windowSize, gameInfo.gameView.tipsEnable, gameInfo);
+    renderPlayerPanel("WhitePlayerPanel", gameInfo.p2Info, false, windowSize, gameInfo.gameView.tipsEnable, gameInfo);
 
     // 3. Bouton retour au menu en bas
     renderBottomControls(windowSize, gameInfo.gameView);
+
+    if (m_showVictoryPopup && m_winnerInfo != nullptr) {
+        renderVictoryPopup(*m_winnerInfo, m_victoryReason, gameInfo);
+    }
 }

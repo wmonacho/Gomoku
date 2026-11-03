@@ -22,6 +22,16 @@ void GameService::newGame(Mode mode, int difficulty, GameInfo& gameInfo) {
            && "newGame() : chaque joueur doit avoir une couleur");
     assert(gameInfo.p1Info.color != gameInfo.p2Info.color && "newGame() : les deux joueurs ont la même couleur");
 
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::bernoulli_distribution dist(0.5);
+
+    bool p1Starts = dist(gen);
+    if (p1Starts)
+        gameInfo.gameView.currentPlayer = &gameInfo.p1Info;
+    else
+        gameInfo.gameView.currentPlayer = &gameInfo.p2Info;
+
     mode_ = mode;
     difficulty_ = difficulty;
     game_.reset(gameInfo.gameView.currentPlayer->color);
