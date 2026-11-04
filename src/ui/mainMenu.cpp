@@ -88,19 +88,6 @@ void MainMenu::renderHeader(const ImVec2& windowSize) {
     ImGui::Separator();
 }
 
-// void MainMenu::clearInfo(GameInfo& gameInfo) {
-//     gameInfo.gameView.board.fill(Cell::Empty);
-//     gameInfo.p1Info.capturedStones = 0;
-//     gameInfo.p1Info.lastMoveTime = 0.0f;
-//     gameInfo.p1Info.lastMoveCoord = "-";
-
-//     gameInfo.p2Info.capturedStones = 0;
-//     gameInfo.p2Info.lastMoveTime = 0.0f;
-//     gameInfo.p2Info.lastMoveCoord = "-";
-
-//     gameInfo.gameView.gameStarted = true;
-// }
-
 void MainMenu::renderModeButtons(const ImVec2& windowSize, GameInfo& gameInfo, GameService& gameService) {
     ImGuiStyle& style = ImGui::GetStyle();
 
@@ -188,7 +175,3 @@ void MainMenu::render(sf::RenderWindow& window, GameInfo& gameInfo, GameService&
 
     ImGui::End();
 }
-
-// Mode MainMenu::getSelectedMode() const {
-//     return m_selectedMode;
-// }

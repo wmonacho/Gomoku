@@ -29,6 +29,12 @@ private:
     void renderBottomControls(const ImVec2& windowSize, GameView& view);
     void renderVictoryPopup(const PlayerInfo& winner, char reason, GameInfo& gameInfo, GameService& gameService);
     void checkMove(MoveResult result, Pos targetPos, GameInfo& gameInfo, GameService& gameService);
+    void infoPopup(const PlayerInfo& winner, std::string reasonStr, GameInfo& gameInfo, GameService& gameService);
+    // void board(sf::RenderWindow& window, const ImVec2& centerPos, float boardSize, float startX, float startY, float step);
+    void renderNumber(sf::RenderWindow& window, float startX, float startY, float step);
+    void previewStone(sf::RenderWindow& window, float startX, float startY, float step, sf::Texture blackStoneTex, sf::Texture whiteStoneTex, const GameView& view);
+    void loadTextures(sf::Texture& blackStoneTex, sf::Texture& whiteStoneTex);
+    void captureStones(sf::RenderWindow& window, float startX, float startY, float step);
 
     sf::Font m_font;
     bool m_fontLoaded = false;

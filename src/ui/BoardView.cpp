@@ -18,19 +18,15 @@ void BoardView::triggerCaptureAnimations(const std::vector<Pos>& captures, Cell 
 void BoardView::checkMove(MoveResult result, Pos targetPos, GameInfo& gameInfo, GameService& gameService) {
     if (result.isLegal) {
         if (!result.captured.empty()) {
-            // La couleur des pièces capturées est celle de l'adversaire de celui qui vient de jouer
             Cell capturedColor = (gameInfo.gameView.currentPlayer->color == Cell::Black) 
                                 ? Cell::White 
                                 : Cell::Black;
 
-            // On déclenche l'animation pour chaque pierre retournée par playMove
             triggerCaptureAnimations(result.captured, capturedColor);
         }
-        // Enregistre le dernier coup pour le joueur actif 
         std::string coordStr = std::to_string(targetPos.x) + ":" + std::to_string(targetPos.y);
         gameInfo.gameView.currentPlayer->lastMoveCoord = coordStr;
 
-        // Met à jour le nombre de captures du joueur actif s'il y en a eu
         if (!result.captured.empty()) {
             gameInfo.gameView.currentPlayer->capturedStones += static_cast<int>(result.captured.size());
         }
@@ -50,7 +46,6 @@ void BoardView::checkMove(MoveResult result, Pos targetPos, GameInfo& gameInfo, 
                 m_victoryReason = 'A';
             m_showVictoryPopup = true;
         }
-        // Alterne le joueur actif
         if (gameInfo.gameView.currentPlayer == &gameInfo.p1Info) {
             gameInfo.gameView.currentPlayer = &gameInfo.p2Info;
         } else {
@@ -107,6 +102,49 @@ void BoardView::handleInput(const sf::Event& event, const sf::RenderWindow& wind
     BoardView::checkMove(result, targetPos, gameInfo, gameService);
 }
 
+void BoardView::infoPopup(const PlayerInfo& winner, std::string reasonStr, GameInfo& gameInfo, GameService& gameService) {
+    std::string line1 = winner.name + " WIN";
+    std::string line2 = "by " + reasonStr;
+    
+    ImGui::Spacing();
+
+    float w1 = ImGui::CalcTextSize(line1.c_str()).x;
+    ImGui::SetCursorPosX((ImGui::GetWindowWidth() - w1) * 0.5f);
+    ImGui::Text("%s", line1.c_str());
+
+    float w2 = ImGui::CalcTextSize(line2.c_str()).x;
+    ImGui::SetCursorPosX((ImGui::GetWindowWidth() - w2) * 0.5f);
+    ImGui::Text("%s", line2.c_str());
+
+    ImGui::Spacing();
+    ImGui::Spacing();
+
+    float btnWidth = 100.0f;
+    float btnHeight = 32.0f;
+    float spacing = 15.0f;
+    float totalWidth = (btnWidth * 2.0f) + spacing;
+
+    ImGui::SetCursorPosX((ImGui::GetWindowWidth() - totalWidth) * 0.5f);
+
+    if (ImGui::Button("menu", ImVec2(btnWidth, btnHeight))) {
+        gameInfo.gameView.gameStarted = false;
+        m_winnerInfo = nullptr;
+        m_showVictoryPopup = false;
+        ImGui::CloseCurrentPopup();
+    }
+
+    ImGui::SameLine(0.0f, spacing);
+
+    if (ImGui::Button("Play Again", ImVec2(btnWidth, btnHeight))) {
+        m_winnerInfo = nullptr;
+        gameService.newGame(gameInfo);
+        m_showVictoryPopup = false; 
+        ImGui::CloseCurrentPopup();
+    }
+
+    ImGui::EndPopup();
+}
+
 void BoardView::renderVictoryPopup(const PlayerInfo& winner, char reason, GameInfo& gameInfo, GameService& gameService) {
     if (m_showVictoryPopup) {
         ImGui::OpenPopup("VictoryModal");
@@ -121,9 +159,6 @@ void BoardView::renderVictoryPopup(const PlayerInfo& winner, char reason, GameIn
         default:  reasonStr = std::string(1, reason); break;
     }
 
-    std::string line1 = winner.name + " WIN";
-    std::string line2 = "by " + reasonStr;
-
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     ImGui::SetNextWindowSize(ImVec2(280.0f, 150.0f));
@@ -133,47 +168,8 @@ void BoardView::renderVictoryPopup(const PlayerInfo& winner, char reason, GameIn
                            | ImGuiWindowFlags_NoMove 
                            | ImGuiWindowFlags_NoCollapse;
 
-    if (ImGui::BeginPopupModal("VictoryModal", nullptr, flags)) {
-        ImGui::Spacing();
-
-        float w1 = ImGui::CalcTextSize(line1.c_str()).x;
-        ImGui::SetCursorPosX((ImGui::GetWindowWidth() - w1) * 0.5f);
-        ImGui::Text("%s", line1.c_str());
-
-        float w2 = ImGui::CalcTextSize(line2.c_str()).x;
-        ImGui::SetCursorPosX((ImGui::GetWindowWidth() - w2) * 0.5f);
-        ImGui::Text("%s", line2.c_str());
-
-        ImGui::Spacing();
-        ImGui::Spacing();
-
-        float btnWidth = 100.0f;
-        float btnHeight = 32.0f;
-        float spacing = 15.0f;
-        float totalWidth = (btnWidth * 2.0f) + spacing;
-
-        ImGui::SetCursorPosX((ImGui::GetWindowWidth() - totalWidth) * 0.5f);
-
-        // Bouton (menu)
-        if (ImGui::Button("menu", ImVec2(btnWidth, btnHeight))) {
-            gameInfo.gameView.gameStarted = false;
-            m_winnerInfo = nullptr;
-            m_showVictoryPopup = false;
-            ImGui::CloseCurrentPopup();
-        }
-
-        ImGui::SameLine(0.0f, spacing);
-
-        // Bouton (rejouer)
-        if (ImGui::Button("rejouer", ImVec2(btnWidth, btnHeight))) {
-            m_winnerInfo = nullptr;
-            gameService.newGame(gameInfo);
-            m_showVictoryPopup = false; 
-            ImGui::CloseCurrentPopup();
-        }
- 
-        ImGui::EndPopup();
-    }
+    if (ImGui::BeginPopupModal("VictoryModal", nullptr, flags))
+        BoardView::infoPopup(winner, reasonStr, gameInfo, gameService);
 }
 
 void BoardView::renderPlayerPanel(const std::string& panelId, const PlayerInfo& player, 
@@ -218,7 +214,6 @@ void BoardView::renderPlayerPanel(const std::string& panelId, const PlayerInfo& 
         ImGui::Separator();
     }
 
-    // Bouton de forfait
     if (!player.isAI) {
         if (ImGui::Button("Forfeit", ImVec2(-1.0f, 35.0f))) {
             if (player.color == gameInfo.p1Info.color)
@@ -233,41 +228,94 @@ void BoardView::renderPlayerPanel(const std::string& panelId, const PlayerInfo& 
     ImGui::End();
 }
 
-void BoardView::renderBoard(sf::RenderWindow& window, const ImVec2& centerPos, float boardSize, const GameView& view) {
-    // 1. Fond en bois du plateau
-    sf::RectangleShape goban(sf::Vector2f(boardSize, boardSize));
-    goban.setOrigin(boardSize * 0.5f, boardSize * 0.5f);
-    goban.setPosition(centerPos.x, centerPos.y);
-    goban.setFillColor(sf::Color(220, 179, 92));
-    goban.setOutlineThickness(3.0f);
-    goban.setOutlineColor(sf::Color(40, 25, 10));
-    window.draw(goban);
+void BoardView::renderNumber(sf::RenderWindow& window, float startX, float startY, float step) {
+    // Police persistante et statique
+    static sf::Font font;
+    static bool fontReady = false;
+    static bool fontAttempted = false;
 
-    // 2. Dimensions et marges
-    float margin = 35.0f;
-    float startX = centerPos.x - (boardSize * 0.5f) + margin;
-    float startY = centerPos.y - (boardSize * 0.5f) + margin;
-    float step   = (boardSize - (margin * 2.0f)) / 18.0f;
+    if (!fontAttempted) {
+        fontAttempted = true;
+        fontReady = font.loadFromFile("assets/fonts/Monocraft.ttf");
+        if (!fontReady) {
+            std::cerr << "Error: Failed to load font 'assets/fonts/Monocraft.ttf' for BoardView" << std::endl;
+        }
+    }
 
-    // 3. Tracé des lignes de la grille
+    if (!fontReady) {
+        return;
+    }
+
+    // Affichage des chiffres 0 à 18
+    sf::Text coordText;
+    coordText.setFont(font);
+    coordText.setCharacterSize(12);
+    coordText.setFillColor(sf::Color(50, 30, 15));
+
     for (int i = 0; i < 19; ++i) {
         float currentX = startX + i * step;
         float currentY = startY + i * step;
 
-        sf::Vertex hLine[] = {
-            sf::Vertex(sf::Vector2f(startX, currentY), sf::Color::Black),
-            sf::Vertex(sf::Vector2f(startX + 18.0f * step, currentY), sf::Color::Black)
-        };
-        window.draw(hLine, 2, sf::Lines);
+        coordText.setString(std::to_string(i));
 
-        sf::Vertex vLine[] = {
-            sf::Vertex(sf::Vector2f(currentX, startY), sf::Color::Black),
-            sf::Vertex(sf::Vector2f(currentX, startY + 18.0f * step), sf::Color::Black)
-        };
-        window.draw(vLine, 2, sf::Lines);
+        sf::FloatRect bounds = coordText.getLocalBounds();
+        coordText.setOrigin(bounds.left + bounds.width * 0.5f,
+                            bounds.top + bounds.height * 0.5f);
+
+        // Axe horizontal (Haut et Bas)
+        coordText.setPosition(currentX, startY - 18.0f);
+        window.draw(coordText);
+
+        coordText.setPosition(currentX, startY + 18.0f * step + 18.0f);
+        window.draw(coordText);
+
+        // Axe vertical (Gauche et Droite)
+        coordText.setPosition(startX - 18.0f, currentY);
+        window.draw(coordText);
+
+        coordText.setPosition(startX + 18.0f * step + 18.0f, currentY);
+        window.draw(coordText);
+    }
+}
+
+void BoardView::loadTextures(sf::Texture& blackStoneTex, sf::Texture& whiteStoneTex) {
+    const unsigned int size = 16;
+    const float radius = 7.0f;
+    const float center = 7.5f;
+
+    sf::Image blackImg;
+    sf::Image whiteImg;
+    blackImg.create(size, size, sf::Color::Transparent);
+    whiteImg.create(size, size, sf::Color::Transparent);
+
+    for (unsigned int y = 0; y < size; ++y) {
+        for (unsigned int x = 0; x < size; ++x) {
+            float dx = static_cast<float>(x) - center;
+            float dy = static_cast<float>(y) - center;
+            float dist = std::sqrt(dx * dx + dy * dy);
+
+            if (dist <= radius) {
+                if (dist > radius - 1.2f) {
+                    blackImg.setPixel(x, y, sf::Color(10, 10, 10));
+                    whiteImg.setPixel(x, y, sf::Color(140, 140, 135));
+                } else if (x >= 4 && x <= 6 && y >= 4 && y <= 6) {
+                    blackImg.setPixel(x, y, sf::Color(90, 90, 95));
+                    whiteImg.setPixel(x, y, sf::Color(255, 255, 255));
+                } else {
+                    blackImg.setPixel(x, y, sf::Color(35, 35, 38));
+                    whiteImg.setPixel(x, y, sf::Color(220, 220, 215));
+                }
+            }
+        }
     }
 
-    // 3.1. Rendu de l'animation de capture des pierres
+    blackStoneTex.loadFromImage(blackImg);
+    whiteStoneTex.loadFromImage(whiteImg);
+    blackStoneTex.setSmooth(false);
+    whiteStoneTex.setSmooth(false);
+}
+
+void BoardView::captureStones(sf::RenderWindow& window, float startX, float startY, float step) {
     float dt = 1.0f / 60.0f; // Ajuste ou passe le deltaTime de ta frame si disponible
 
     for (auto it = m_captureAnims.begin(); it != m_captureAnims.end(); ) {
@@ -303,101 +351,9 @@ void BoardView::renderBoard(sf::RenderWindow& window, const ImVec2& centerPos, f
         window.draw(stone);
         ++it;
     }
+}
 
-    // 4. Police persistante et statique
-    static sf::Font font;
-    static bool fontReady = false;
-    static bool fontAttempted = false;
-
-    if (!fontAttempted) {
-        fontAttempted = true;
-        fontReady = font.loadFromFile("assets/fonts/Monocraft.ttf");
-        if (!fontReady) {
-            std::cerr << "Error: Failed to load font 'assets/fonts/Monocraft.ttf' for BoardView" << std::endl;
-        }
-    }
-
-    if (!fontReady) {
-        return;
-    }
-
-    // 5. Affichage des chiffres 0 à 18
-    sf::Text coordText;
-    coordText.setFont(font);
-    coordText.setCharacterSize(12);
-    coordText.setFillColor(sf::Color(50, 30, 15));
-
-    for (int i = 0; i < 19; ++i) {
-        float currentX = startX + i * step;
-        float currentY = startY + i * step;
-
-        coordText.setString(std::to_string(i));
-
-        sf::FloatRect bounds = coordText.getLocalBounds();
-        coordText.setOrigin(bounds.left + bounds.width * 0.5f,
-                            bounds.top + bounds.height * 0.5f);
-
-        // Axe horizontal (Haut et Bas)
-        coordText.setPosition(currentX, startY - 18.0f);
-        window.draw(coordText);
-
-        coordText.setPosition(currentX, startY + 18.0f * step + 18.0f);
-        window.draw(coordText);
-
-        // Axe vertical (Gauche et Droite)
-        coordText.setPosition(startX - 18.0f, currentY);
-        window.draw(coordText);
-
-        coordText.setPosition(startX + 18.0f * step + 18.0f, currentY);
-        window.draw(coordText);
-    }
-
-    // Previsuatlisation des pierres
-    // test v2
-    static sf::Texture blackStoneTex;
-    static sf::Texture whiteStoneTex;
-    static bool texturesLoaded = false;
-
-    if (!texturesLoaded) {
-        const unsigned int size = 16;
-        const float radius = 7.0f;
-        const float center = 7.5f;
-
-        sf::Image blackImg;
-        sf::Image whiteImg;
-        blackImg.create(size, size, sf::Color::Transparent);
-        whiteImg.create(size, size, sf::Color::Transparent);
-
-        for (unsigned int y = 0; y < size; ++y) {
-            for (unsigned int x = 0; x < size; ++x) {
-                float dx = static_cast<float>(x) - center;
-                float dy = static_cast<float>(y) - center;
-                float dist = std::sqrt(dx * dx + dy * dy);
-
-                if (dist <= radius) {
-                    if (dist > radius - 1.2f) {
-                        blackImg.setPixel(x, y, sf::Color(10, 10, 10));
-                        whiteImg.setPixel(x, y, sf::Color(140, 140, 135));
-                    } else if (x >= 4 && x <= 6 && y >= 4 && y <= 6) {
-                        blackImg.setPixel(x, y, sf::Color(90, 90, 95));
-                        whiteImg.setPixel(x, y, sf::Color(255, 255, 255));
-                    } else {
-                        blackImg.setPixel(x, y, sf::Color(35, 35, 38));
-                        whiteImg.setPixel(x, y, sf::Color(220, 220, 215));
-                    }
-                }
-            }
-        }
-
-        blackStoneTex.loadFromImage(blackImg);
-        whiteStoneTex.loadFromImage(whiteImg);
-        blackStoneTex.setSmooth(false);
-        whiteStoneTex.setSmooth(false);
-
-        texturesLoaded = true;
-    }
-
-    // 7. Affichage des pions pixelisés
+void BoardView::previewStone(sf::RenderWindow& window, float startX, float startY, float step, sf::Texture blackStoneTex, sf::Texture whiteStoneTex, const GameView& view) {
     sf::Sprite stoneSprite;
     stoneSprite.setOrigin(8.0f, 8.0f);
 
@@ -424,8 +380,7 @@ void BoardView::renderBoard(sf::RenderWindow& window, const ImVec2& centerPos, f
             window.draw(stoneSprite);
         }
     }
-    // fin test v2
-    // 8. Prévisualisation sous le curseur (Ghost Stone)
+
     if (!ImGui::GetIO().WantCaptureMouse && view.currentPlayer != nullptr && !view.currentPlayer->isAI) {
         sf::Vector2i mousePixel = sf::Mouse::getPosition(window);
         float mouseX = static_cast<float>(mousePixel.x);
@@ -465,6 +420,53 @@ void BoardView::renderBoard(sf::RenderWindow& window, const ImVec2& centerPos, f
             }
         }
     }
+}
+
+void BoardView::renderBoard(sf::RenderWindow& window, const ImVec2& centerPos, float boardSize, const GameView& view) {
+    // 1. Fond en bois du plateau
+    sf::RectangleShape goban(sf::Vector2f(boardSize, boardSize));
+    goban.setOrigin(boardSize * 0.5f, boardSize * 0.5f);
+    goban.setPosition(centerPos.x, centerPos.y);
+    goban.setFillColor(sf::Color(220, 179, 92));
+    goban.setOutlineThickness(3.0f);
+    goban.setOutlineColor(sf::Color(40, 25, 10));
+    window.draw(goban);
+
+    // 2. Dimensions et marges
+    float margin = 35.0f;
+    float startX = centerPos.x - (boardSize * 0.5f) + margin;
+    float startY = centerPos.y - (boardSize * 0.5f) + margin;
+    float step   = (boardSize - (margin * 2.0f)) / 18.0f;
+
+    // 3. Tracé des lignes de la grille
+    for (int i = 0; i < 19; ++i) {
+        float currentX = startX + i * step;
+        float currentY = startY + i * step;
+
+        sf::Vertex hLine[] = {
+            sf::Vertex(sf::Vector2f(startX, currentY), sf::Color::Black),
+            sf::Vertex(sf::Vector2f(startX + 18.0f * step, currentY), sf::Color::Black)
+        };
+        window.draw(hLine, 2, sf::Lines);
+
+        sf::Vertex vLine[] = {
+            sf::Vertex(sf::Vector2f(currentX, startY), sf::Color::Black),
+            sf::Vertex(sf::Vector2f(currentX, startY + 18.0f * step), sf::Color::Black)
+        };
+        window.draw(vLine, 2, sf::Lines);
+    }
+    BoardView::captureStones(window, startX, startY, step);
+    BoardView::renderNumber(window, startX, startY, step);
+
+    static sf::Texture blackStoneTex;
+    static sf::Texture whiteStoneTex;
+    static bool texturesLoaded = false;
+
+    if (!texturesLoaded) {
+        BoardView::loadTextures(blackStoneTex, whiteStoneTex);
+        texturesLoaded = true;
+    }
+    BoardView::previewStone(window, startX, startY, step, blackStoneTex, whiteStoneTex, view);
 }
 
 void BoardView::renderBottomControls(const ImVec2& windowSize, GameView& view) {

@@ -19,7 +19,6 @@ class MainMenu {
         void            setTitleFont(ImFont* font);
         void            render(sf::RenderWindow& window, GameInfo& gameInfo, GameService& gameService);
         bool            isTipsEnabled() const;
-        // Mode            getSelectedMode() const;
         bool            loadBackgroundFrames(int totalFrames = 60);
 
     private:
@@ -29,7 +28,6 @@ class MainMenu {
         void            renderOptions(const ImVec2& windowSize, GameInfo& gameInfo);
         void            clearInfo(GameInfo& gameInfo);
 
-        // Mode                        m_selectedMode;
         ImFont*                     m_titleFont = nullptr;
         std::vector<sf::Texture>    m_bgTextures{};
         sf::Sprite                  m_bgSprite{};
