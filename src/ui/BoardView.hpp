@@ -4,8 +4,15 @@
 #include <imgui.h>
 #include <string>
 #include "../app/Dto.hpp"
-#include <cmath>
+// #include <cmath>
 #include "app/GameService.hpp"
+
+struct CaptureAnim {
+    Pos pos;             // Coordonnées de la pièce (x, y)
+    Cell color;          // Black ou White
+    float elapsed = 0.0f;
+    float duration = 0.25f; // Durée en secondes (250 ms)
+};
 
 class BoardView {
 public:
@@ -14,7 +21,7 @@ public:
 
     void render(sf::RenderWindow& window, GameInfo& gameInfo, GameService& gameService);
     void handleInput(const sf::Event& event, const sf::RenderWindow& window, GameInfo& gameInfo, GameService& gameService);
-
+    void triggerCaptureAnimations(const std::vector<Pos>& captures, Cell capturedColor);
 private:
     void renderPlayerPanel(const std::string& panelId, const PlayerInfo& player, 
                            bool isLeft, const ImVec2& windowSize, bool tipsEnable, GameInfo& gameInfo);
@@ -29,4 +36,6 @@ private:
     bool m_showVictoryPopup = false;
     const PlayerInfo* m_winnerInfo = nullptr;
     char m_victoryReason = ' ';
+
+    std::vector<CaptureAnim> m_captureAnims;
 };

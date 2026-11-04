@@ -20,7 +20,7 @@ enum class Cell : uint8_t {
 
 enum class Mode { PvAI, PvP, AIvAI };
 
-enum class VicReason {
+enum class WinReason {
     Align = 'A',
     Captures = 'C' ,
     Forfeit = 'F',

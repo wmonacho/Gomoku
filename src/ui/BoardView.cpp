@@ -9,8 +9,23 @@ BoardView::BoardView() {
     }
 }
 
+void BoardView::triggerCaptureAnimations(const std::vector<Pos>& captures, Cell capturedColor) {
+    for (const Pos& p : captures) {
+        m_captureAnims.push_back({p, capturedColor, 0.0f, 0.30f});
+    }
+}
+
 void BoardView::checkMove(MoveResult result, Pos targetPos, GameInfo& gameInfo, GameService& gameService) {
     if (result.isLegal) {
+        if (!result.captured.empty()) {
+            // La couleur des pièces capturées est celle de l'adversaire de celui qui vient de jouer
+            Cell capturedColor = (gameInfo.gameView.currentPlayer->color == Cell::Black) 
+                                ? Cell::White 
+                                : Cell::Black;
+
+            // On déclenche l'animation pour chaque pierre retournée par playMove
+            triggerCaptureAnimations(result.captured, capturedColor);
+        }
         // Enregistre le dernier coup pour le joueur actif 
         std::string coordStr = std::to_string(targetPos.x) + ":" + std::to_string(targetPos.y);
         gameInfo.gameView.currentPlayer->lastMoveCoord = coordStr;
@@ -27,7 +42,7 @@ void BoardView::checkMove(MoveResult result, Pos targetPos, GameInfo& gameInfo, 
 
         if (gameInfo.gameView.winner.has_value()) {
             m_winnerInfo = (*gameInfo.gameView.winner == Cell::Black) ? &gameInfo.p1Info : & gameInfo.p2Info;
-            if (gameInfo.gameView.currentPlayer->capturedStones == 10)
+            if (gameInfo.gameView.currentPlayer->capturedStones >= 10)
                 m_victoryReason = 'C';
             else if (gameInfo.gameView.currentPlayer->isAI && gameInfo.gameView.currentPlayer->lastMoveTime > 500)
                 m_victoryReason = 'T';
@@ -141,8 +156,6 @@ void BoardView::renderVictoryPopup(const PlayerInfo& winner, char reason, GameIn
 
         // Bouton (menu)
         if (ImGui::Button("menu", ImVec2(btnWidth, btnHeight))) {
-            gameInfo.gameView.board.fill(Cell::Empty);
-            gameInfo.gameView.winner.reset();
             gameInfo.gameView.gameStarted = false;
             m_winnerInfo = nullptr;
             m_showVictoryPopup = false;
@@ -153,13 +166,6 @@ void BoardView::renderVictoryPopup(const PlayerInfo& winner, char reason, GameIn
 
         // Bouton (rejouer)
         if (ImGui::Button("rejouer", ImVec2(btnWidth, btnHeight))) {
-            // gameInfo.gameView.board.fill(Cell::Empty);
-            // gameInfo.p1Info.capturedStones = 0;
-            // gameInfo.p2Info.capturedStones = 0;
-            // gameInfo.p1Info.lastMoveCoord = "-";
-            // gameInfo.p2Info.lastMoveCoord = "-";
-            // gameInfo.gameView.winner.reset(); 
-            // gameInfo.gameView.currentPlayer = nullptr;
             m_winnerInfo = nullptr;
             gameService.newGame(gameInfo);
             m_showVictoryPopup = false; 
@@ -259,6 +265,43 @@ void BoardView::renderBoard(sf::RenderWindow& window, const ImVec2& centerPos, f
             sf::Vertex(sf::Vector2f(currentX, startY + 18.0f * step), sf::Color::Black)
         };
         window.draw(vLine, 2, sf::Lines);
+    }
+
+    // 3.1. Rendu de l'animation de capture des pierres
+    float dt = 1.0f / 60.0f; // Ajuste ou passe le deltaTime de ta frame si disponible
+
+    for (auto it = m_captureAnims.begin(); it != m_captureAnims.end(); ) {
+        it->elapsed += dt;
+
+        // Fin de l'animation pour cette pierre
+        if (it->elapsed >= it->duration) {
+            it = m_captureAnims.erase(it);
+            continue;
+        }
+
+        // Progression de 0.0f à 1.0f
+        float t = it->elapsed / it->duration;
+        float scale = 1.0f - t;
+        sf::Uint8 alpha = static_cast<sf::Uint8>(255.0f * (1.0f - t));
+
+        // Position de l'intersection correspondante sur le plateau
+        float posX = startX + it->pos.x * step;
+        float posY = startY + it->pos.y * step;
+
+        // Dessin de la pierre animée (rétrécissement et disparition progressive)
+        float radius = (step * 0.45f) * scale;
+        sf::CircleShape stone(radius);
+        stone.setOrigin(radius, radius);
+        stone.setPosition(posX, posY);
+
+        if (it->color == Cell::Black) {
+            stone.setFillColor(sf::Color(20, 20, 20, alpha));
+        } else {
+            stone.setFillColor(sf::Color(240, 240, 240, alpha));
+        }
+
+        window.draw(stone);
+        ++it;
     }
 
     // 4. Police persistante et statique
