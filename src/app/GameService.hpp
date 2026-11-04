@@ -11,7 +11,7 @@ public:
     GameService();
 
     // difficulty = profondeur maximale de l'IA, en coups.
-    void           newGame(Mode mode, int difficulty, GameInfo& gameInfo);
+    void           newGame(GameInfo& gameInfo);
     MoveResult     playMove(Pos pos);
     // Meilleur coup pour le joueur courant, sans le jouer : l'appelant enchaîne avec playMove.
     MoveSuggestion suggestMove();

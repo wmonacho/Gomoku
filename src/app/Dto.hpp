@@ -20,6 +20,13 @@ enum class Cell : uint8_t {
 
 enum class Mode { PvAI, PvP, AIvAI };
 
+enum class VicReason {
+    Align = 'A',
+    Captures = 'C' ,
+    Forfeit = 'F',
+    Timeout = 'T',
+};
+
 struct Pos {
     int x;
     int y;
@@ -57,6 +64,9 @@ struct GameView {
 };
 
 struct GameInfo {
+    Mode    selectedMode;
+    int     difficulty = 1;
+
     GameView gameView;
     PlayerInfo p1Info{"Player 1 (Black)", false, 0, 0.0f, "-", Cell::Black};
     PlayerInfo p2Info{"Player 2 (White)", false, 0, 0.0f, "-", Cell::White};

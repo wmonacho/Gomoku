@@ -9,18 +9,51 @@ BoardView::BoardView() {
     }
 }
 
+void BoardView::checkMove(MoveResult result, Pos targetPos, GameInfo& gameInfo, GameService& gameService) {
+    if (result.isLegal) {
+        // Enregistre le dernier coup pour le joueur actif 
+        std::string coordStr = std::to_string(targetPos.x) + ":" + std::to_string(targetPos.y);
+        gameInfo.gameView.currentPlayer->lastMoveCoord = coordStr;
+
+        // Met à jour le nombre de captures du joueur actif s'il y en a eu
+        if (!result.captured.empty()) {
+            gameInfo.gameView.currentPlayer->capturedStones += static_cast<int>(result.captured.size());
+        }
+
+        // Synchronise le plateau complet (prend en compte le coup et les pions capturés retirés)
+        GameView updatedView = gameService.currentView();
+        gameInfo.gameView.board = updatedView.board;
+        gameInfo.gameView.winner = updatedView.winner;
+
+        if (gameInfo.gameView.winner.has_value()) {
+            m_winnerInfo = (*gameInfo.gameView.winner == Cell::Black) ? &gameInfo.p1Info : & gameInfo.p2Info;
+            if (gameInfo.gameView.currentPlayer->capturedStones == 10)
+                m_victoryReason = 'C';
+            else if (gameInfo.gameView.currentPlayer->isAI && gameInfo.gameView.currentPlayer->lastMoveTime > 500)
+                m_victoryReason = 'T';
+            else
+                m_victoryReason = 'A';
+            m_showVictoryPopup = true;
+        }
+        // Alterne le joueur actif
+        if (gameInfo.gameView.currentPlayer == &gameInfo.p1Info) {
+            gameInfo.gameView.currentPlayer = &gameInfo.p2Info;
+        } else {
+            gameInfo.gameView.currentPlayer = &gameInfo.p1Info;
+        }
+    } else {
+        std::cout << "Coup illegal (" << targetPos.x << ", " << targetPos.y << ") : " 
+                  << result.rejectionReason << std::endl;
+    }
+}
+
 void BoardView::handleInput(const sf::Event& event, const sf::RenderWindow& window, 
                          GameInfo& gameInfo, GameService& gameService) {
     if (event.type != sf::Event::MouseButtonPressed || event.mouseButton.button != sf::Mouse::Left) {
         return;
-    }
-
-    if (gameInfo.gameView.currentPlayer == nullptr || gameInfo.gameView.currentPlayer->isAI) {
+    } else if (gameInfo.gameView.currentPlayer == nullptr || gameInfo.gameView.currentPlayer->isAI) {
         return;
-    }
-
-    // Ignore le clic si la souris survole une fenêtre ImGui
-    if (ImGui::GetIO().WantCaptureMouse) {
+    } else if (ImGui::GetIO().WantCaptureMouse) { // Ignore le clic si la souris survole une fenêtre ImGui
         return;
     }
 
@@ -53,49 +86,23 @@ void BoardView::handleInput(const sf::Event& event, const sf::RenderWindow& wind
         return;
     }
 
-    // Appel au moteur de jeu
     Pos targetPos{gridX, gridY};
     MoveResult result = gameService.playMove(targetPos);
 
-    if (result.isLegal) {
-        // Enregistre le dernier coup pour le joueur actif 
-        std::string coordStr = std::to_string(gridX) + ":" + std::to_string(gridY);
-        gameInfo.gameView.currentPlayer->lastMoveCoord = coordStr;
-
-        // Met à jour le nombre de captures du joueur actif s'il y en a eu
-        if (!result.captured.empty()) {
-            gameInfo.gameView.currentPlayer->capturedStones += static_cast<int>(result.captured.size());
-        }
-
-        // Synchronise le plateau complet (prend en compte le coup et les pions capturés retirés)
-        GameView updatedView = gameService.currentView();
-        gameInfo.gameView.board = updatedView.board;
-        // gameInfo.gameView.winner = updatedView.winner;
-
-        // Alterne le joueur actif
-        if (gameInfo.gameView.currentPlayer == &gameInfo.p1Info) {
-            gameInfo.gameView.currentPlayer = &gameInfo.p2Info;
-        } else {
-            gameInfo.gameView.currentPlayer = &gameInfo.p1Info;
-        }
-    } else {
-        std::cout << "Coup illegal (" << gridX << ", " << gridY << ") : " 
-                  << result.rejectionReason << std::endl;
-    }
+    BoardView::checkMove(result, targetPos, gameInfo, gameService);
 }
 
-void BoardView::renderVictoryPopup(const PlayerInfo& winner, char reason, GameInfo& gameInfo) {
+void BoardView::renderVictoryPopup(const PlayerInfo& winner, char reason, GameInfo& gameInfo, GameService& gameService) {
     if (m_showVictoryPopup) {
         ImGui::OpenPopup("VictoryModal");
     }
     std::string reasonStr;
     switch (reason) {
-        case 'A':
-        case '5': reasonStr = "align 5"; break;
-        case 'C':
-        case '1': reasonStr = "10 captures"; break;
+        case 'A': reasonStr = "align 5"; break;
+        case 'C': reasonStr = "10 captures"; break;
         case 'F': reasonStr = "forfeit"; break;
         case 'T': reasonStr = "timeout"; break;
+        case 'O': reasonStr = "winning"; break;
         default:  reasonStr = std::string(1, reason); break;
     }
 
@@ -135,7 +142,7 @@ void BoardView::renderVictoryPopup(const PlayerInfo& winner, char reason, GameIn
         // Bouton (menu)
         if (ImGui::Button("menu", ImVec2(btnWidth, btnHeight))) {
             gameInfo.gameView.board.fill(Cell::Empty);
-            // gameInfo.gameView.winner.reset();
+            gameInfo.gameView.winner.reset();
             gameInfo.gameView.gameStarted = false;
             m_winnerInfo = nullptr;
             m_showVictoryPopup = false;
@@ -146,14 +153,15 @@ void BoardView::renderVictoryPopup(const PlayerInfo& winner, char reason, GameIn
 
         // Bouton (rejouer)
         if (ImGui::Button("rejouer", ImVec2(btnWidth, btnHeight))) {
-            gameInfo.gameView.board.fill(Cell::Empty);
-            gameInfo.p1Info.capturedStones = 0;
-            gameInfo.p2Info.capturedStones = 0;
-            gameInfo.p1Info.lastMoveCoord = "-";
-            gameInfo.p2Info.lastMoveCoord = "-";
+            // gameInfo.gameView.board.fill(Cell::Empty);
+            // gameInfo.p1Info.capturedStones = 0;
+            // gameInfo.p2Info.capturedStones = 0;
+            // gameInfo.p1Info.lastMoveCoord = "-";
+            // gameInfo.p2Info.lastMoveCoord = "-";
             // gameInfo.gameView.winner.reset(); 
-            gameInfo.gameView.currentPlayer = &gameInfo.p1Info;
+            // gameInfo.gameView.currentPlayer = nullptr;
             m_winnerInfo = nullptr;
+            gameService.newGame(gameInfo);
             m_showVictoryPopup = false; 
             ImGui::CloseCurrentPopup();
         }
@@ -426,7 +434,9 @@ void BoardView::renderBottomControls(const ImVec2& windowSize, GameView& view) {
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar 
                            | ImGuiWindowFlags_NoResize 
                            | ImGuiWindowFlags_NoMove 
-                           | ImGuiWindowFlags_NoBackground;
+                           | ImGuiWindowFlags_NoBackground
+                           | ImGuiWindowFlags_NoScrollbar
+                           | ImGuiWindowFlags_NoScrollWithMouse;
  
     ImGui::Begin("BottomControls", nullptr, flags);
     if (ImGui::Button("Return to Menu", ImVec2(btnWidth, btnHeight))) {
@@ -450,6 +460,6 @@ void BoardView::render(sf::RenderWindow& window, GameInfo& gameInfo, GameService
     renderBottomControls(windowSize, gameInfo.gameView);
 
     if (m_showVictoryPopup && m_winnerInfo != nullptr) {
-        renderVictoryPopup(*m_winnerInfo, m_victoryReason, gameInfo);
+        renderVictoryPopup(*m_winnerInfo, m_victoryReason, gameInfo, gameService);
     }
 }

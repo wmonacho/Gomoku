@@ -16,8 +16,8 @@ namespace {
 
 GameService::GameService() : mode_(Mode::PvAI), difficulty_(DEFAULT_DIFFICULTY) {}
 
-void GameService::newGame(Mode mode, int difficulty, GameInfo& gameInfo) {
-    assert(difficulty > 0 && "newGame() : difficulty doit être une profondeur positive");
+void GameService::newGame(GameInfo& gameInfo) {
+    assert(gameInfo.difficulty > 0 && "newGame() : difficulty doit être une profondeur positive");
     assert(gameInfo.p1Info.color != Cell::Empty && gameInfo.p2Info.color != Cell::Empty
            && "newGame() : chaque joueur doit avoir une couleur");
     assert(gameInfo.p1Info.color != gameInfo.p2Info.color && "newGame() : les deux joueurs ont la même couleur");
@@ -32,8 +32,8 @@ void GameService::newGame(Mode mode, int difficulty, GameInfo& gameInfo) {
     else
         gameInfo.gameView.currentPlayer = &gameInfo.p2Info;
 
-    mode_ = mode;
-    difficulty_ = difficulty;
+    mode_ = gameInfo.selectedMode;
+    difficulty_ = gameInfo.difficulty;
     game_.reset(gameInfo.gameView.currentPlayer->color);
 
     resetStats(gameInfo.p1Info);
@@ -60,7 +60,7 @@ GameView GameService::currentView() const {
         for (int x = 0; x < BOARD_SIZE; x++)
             view.board[y * BOARD_SIZE + x] = game_.board().at({x, y});
 
-    // view.winner = game_.winner();
+    view.winner = game_.winner();
     return view;
 }
 

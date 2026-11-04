@@ -20,7 +20,8 @@ private:
                            bool isLeft, const ImVec2& windowSize, bool tipsEnable, GameInfo& gameInfo);
     void renderBoard(sf::RenderWindow& window, const ImVec2& centerPos, float boardSize, const GameView& view);
     void renderBottomControls(const ImVec2& windowSize, GameView& view);
-    void renderVictoryPopup(const PlayerInfo& winner, char reason, GameInfo& gameInfo); 
+    void renderVictoryPopup(const PlayerInfo& winner, char reason, GameInfo& gameInfo, GameService& gameService);
+    void checkMove(MoveResult result, Pos targetPos, GameInfo& gameInfo, GameService& gameService);
 
     sf::Font m_font;
     bool m_fontLoaded = false;
