@@ -2,6 +2,7 @@
 
 #include <initializer_list>
 
+#include "app/Dto.hpp"
 #include "support/TestRunner.hpp"
 
 namespace {
@@ -243,12 +244,24 @@ namespace {
     void testResetStartsANewGame() {
         Game game;
         blackMakesBreakableFive(game);
-        game.reset();
+        game.reset(Cell::Black);
         CHECK(game.board().at({1, 2}) == Cell::Empty);
         CHECK(game.currentPlayer() == Cell::Black);
         CHECK(!game.winner());
         playAll(game, {{15, 15}, {16, 16}});
         CHECK(!game.winner());
+    }
+
+    void testWhiteCanStart() {
+        Game game;
+        game.reset(Cell::White);
+        CHECK(game.currentPlayer() == Cell::White);
+        CHECK(game.play({9, 9}).isLegal);
+        CHECK(game.board().at({9, 9}) == Cell::White);
+        CHECK(game.currentPlayer() == Cell::Black);
+        game.undo();
+        CHECK(game.currentPlayer() == Cell::White);
+        CHECK(game.board().at({9, 9}) == Cell::Empty);
     }
 }
 
@@ -280,6 +293,7 @@ int main() {
     TestRunner::run("undo : le 5 en sursis revient", testUndoRestoresThePendingFive);
     TestRunner::run("undo : tout annuler revient au départ", testUndoAllMovesReturnsToTheStart);
     TestRunner::run("reset : nouvelle partie", testResetStartsANewGame);
+    TestRunner::run("reset : Blanc peut commencer", testWhiteCanStart);
 
     return TestRunner::finish();
 }

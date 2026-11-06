@@ -2,13 +2,17 @@
 
 #include "core/Rules.hpp"
 
+#include <cassert>
+
+// État valide par défaut : la vraie couleur de départ arrive par reset().
 Game::Game() {
-    reset(Cell::Empty);
+    reset(Cell::Black);
 }
 
-void Game::reset(Cell cell) {
+void Game::reset(Cell firstPlayer) {
+    assert(firstPlayer != Cell::Empty && "reset() : firstPlayer doit être Black ou White");
     board_ = Board();
-    currentPlayer_ = cell;
+    currentPlayer_ = firstPlayer;
     winner_ = std::nullopt;
 
     pendingFive_ = std::nullopt;
@@ -16,11 +20,19 @@ void Game::reset(Cell cell) {
 }
 
 MoveResult Game::play(Pos pos) {
-    const std::string reason = rejectionReason(pos);
-    if (!reason.empty()) {
-        return {false, reason, {}};
+    const MoveError error = checkMove(pos);
+    if (error != MoveError::None) {
+        return {false, describe(error), {}};
     }
+    return {true, "", applyMove(pos)};
+}
 
+void Game::playLegal(Pos pos) {
+    assert(isLegalMove(pos) && "playLegal() attend un coup déjà vérifié");
+    applyMove(pos);
+}
+
+std::vector<Pos> Game::applyMove(Pos pos) {
     history_.push_back({currentPlayer_, winner_, pendingFive_});
 
     board_.place(pos, currentPlayer_);
@@ -44,7 +56,7 @@ MoveResult Game::play(Pos pos) {
     }
 
     currentPlayer_ = opponent(currentPlayer_);
-    return {true, "", captures};
+    return captures;
 }
 
 void Game::undo() {
@@ -57,24 +69,37 @@ void Game::undo() {
 }
 
 bool Game::isLegalMove(Pos pos) const {
-    return rejectionReason(pos).empty();
+    return checkMove(pos) == MoveError::None;
 }
 
-std::string Game::rejectionReason(Pos pos) const {
+
+Game::MoveError Game::checkMove(Pos pos) const {
     if (winner_) {
-        return "The game is over";
+        return MoveError::GameOver;
     }
     if (!board_.isInside(pos)) {
-        return "Position is outside the board";
+        return MoveError::Outside;
     }
     if (board_.at(pos) != Cell::Empty) {
-        return "Position is already occupied";
+        return MoveError::Occupied;
     }
     if (Rules::createsDoubleFreeThree(board_, pos, currentPlayer_)) {
-        return "Double free-three is forbidden";
+        return MoveError::DoubleFreeThree;
+    }
+    return MoveError::None;
+}
+
+const char* Game::describe(MoveError error) {
+    switch (error) {
+        case MoveError::None:            return "";
+        case MoveError::GameOver:        return "The game is over";
+        case MoveError::Outside:         return "Position is outside the board";
+        case MoveError::Occupied:        return "Position is already occupied";
+        case MoveError::DoubleFreeThree: return "Double free-three is forbidden";
     }
     return "";
 }
+
 
 const Board& Game::board() const {
     return board_;
@@ -90,4 +115,8 @@ int Game::captureCount(Cell color) const {
 
 std::optional<Cell> Game::winner() const {
     return winner_;
+}
+
+std::optional<Pos> Game::pendingFive() const {
+    return pendingFive_;
 }

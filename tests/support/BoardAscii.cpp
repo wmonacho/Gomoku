@@ -3,6 +3,8 @@
 #include <cassert>
 #include <cstdio>
 
+#include "app/Dto.hpp"
+
 namespace {
 
     char symbolOf(Cell cell) {

@@ -3,13 +3,9 @@
 #include <SFML/Graphics.hpp>
 #include <string>
 #include <imgui.h>
-#include <iostream>
-#include <imgui-SFML.h>
-#include <iomanip>
-#include <sstream>
 #include <vector>
-#include "../app/Dto.hpp"
-#include "../app/GameService.hpp"
+#include "app/Dto.hpp"
+#include "app/GameService.hpp"
 
 class MainMenu {
     public:

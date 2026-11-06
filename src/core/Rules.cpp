@@ -1,15 +1,24 @@
 #include "core/Rules.hpp"
 
+#include <array>
 #include <cassert>
-#include <string>
+#include <cstddef>
 #include <string_view>
 
 namespace {
 
-    int countInDirection(const Board& board, Pos pos, Pos dir, Cell color) {
+    bool contains(const std::vector<Pos>& stones, Pos pos) {
+        for (const Pos& stone : stones)
+            if (stone.x == pos.x && stone.y == pos.y)
+                return true;
+        return false;
+    }
+
+    // Les pierres de removed comptent comme vides : on simule une capture sans copier le plateau.
+    int countInDirection(const Board& board, Pos pos, Pos dir, Cell color, const std::vector<Pos>& removed = {}) {
         int count = 0;
         Pos cur = step(pos, dir);
-        while (board.isInside(cur) && board.at(cur) == color) {
+        while (board.isInside(cur) && board.at(cur) == color && !contains(removed, cur)) {
             ++count;
             cur = step(cur, dir);
         }
@@ -45,33 +54,47 @@ namespace {
     }
 
     // Un 6 ou plus peut perdre une pierre au bout et rester un 5 : on revérifie chaque pierre restante.
-    bool fiveSurvives(const Board& board, const std::vector<Pos>& stones, Cell color) {
-        for (const Pos& stone : stones)
-            if (board.at(stone) == color && Rules::makesFiveInARow(board, stone, color))
-                return true;
+    bool fiveSurvives(const Board& board, const std::vector<Pos>& stones, Cell color, const std::vector<Pos>& captured) {
+        for (const Pos& stone : stones) {
+            if (contains(captured, stone))
+                continue;
+            for (const Pos& dir : DIRECTIONS) {
+                const Pos opposite = {-dir.x, -dir.y};
+                const int total = 1
+                                + countInDirection(board, stone, dir, color, captured)
+                                + countInDirection(board, stone, opposite, color, captured);
+                if (total >= 5)
+                    return true;
+            }
+        }
         return false;
     }
 
-    // 'X' = pierre de color (pos compris), '_' = vide, 'O' = adverse ou hors du plateau. pos est à l'index 5.
-    std::string lineAround(const Board& board, Pos pos, Pos dir, Cell color) {
-        std::string line;
-        for (int i = -5; i <= 5; i++) {
+    constexpr int LINE_RADIUS = 5;
+    using Line = std::array<char, 2 * LINE_RADIUS + 1>;
+
+    // 'X' = pierre de color (pos compris), '_' = vide, 'O' = adverse ou hors du plateau. pos est au centre.
+    Line lineAround(const Board& board, Pos pos, Pos dir, Cell color) {
+        Line line{};
+        for (int i = -LINE_RADIUS; i <= LINE_RADIUS; i++) {
             const Pos cur = step(pos, dir, i);
+            char& c = line[i + LINE_RADIUS];
             if (i == 0 || (board.isInside(cur) && board.at(cur) == color))
-                line += 'X';
+                c = 'X';
             else if (board.isInside(cur) && board.at(cur) == Cell::Empty)
-                line += '_';
+                c = '_';
             else
-                line += 'O';
+                c = 'O';
         }
         return line;
     }
 
     bool hasFreeThree(const Board& board, Pos pos, Pos dir, Cell color) {
-        constexpr size_t POS_INDEX = 5;
-        const std::string line = lineAround(board, pos, dir, color);
+        constexpr size_t POS_INDEX = LINE_RADIUS;
+        const Line chars = lineAround(board, pos, dir, color);
+        const std::string_view line(chars.data(), chars.size());
         for (const std::string_view pattern : {"_XXX_", "_XX_X_", "_X_XX_"}) {
-            for (size_t start = line.find(pattern); start != std::string::npos; start = line.find(pattern, start + 1))
+            for (size_t start = line.find(pattern); start != std::string_view::npos; start = line.find(pattern, start + 1))
                 if (start <= POS_INDEX && POS_INDEX < start + pattern.size())
                     return true;
         }
@@ -98,6 +121,17 @@ std::vector<Pos> findCaptures(const Board& board, Pos pos, Cell color) {
         }
     }
     return captured;
+}
+
+// Même test que findCaptures, sans construire la liste : pour les appels très fréquents.
+bool canCapture(const Board& board, Pos pos, Cell color) {
+    for (const Pos& dir : DIRECTIONS) {
+        const Pos opposite = {-dir.x, -dir.y};
+        for (const Pos& d : {dir, opposite})
+            if (checkPatternCapture(board, pos, d, color))
+                return true;
+    }
+    return false;
 }
 
 bool makesFiveInARow(const Board& board, Pos pos, Cell color) {
@@ -139,11 +173,8 @@ bool canAnswerFive(const Board& board, Pos fivePos, Cell fiveColor) {
             if (captured.empty())
                 continue;
 
-            Board after = board;
-            after.place(pos, answerer);
-            for (const Pos& stone : captured)
-                after.capture(stone);
-            if (after.captureCount(answerer) >= WINNING_CAPTURES || !fiveSurvives(after, fiveStones, fiveColor))
+            const int capturesAfter = board.captureCount(answerer) + static_cast<int>(captured.size());
+            if (capturesAfter >= WINNING_CAPTURES || !fiveSurvives(board, fiveStones, fiveColor, captured))
                 return true;
         }
     }
@@ -154,7 +185,7 @@ bool createsDoubleFreeThree(const Board& board, Pos pos, Cell color) {
     assert(board.isInside(pos) && "createsDoubleFreeThree() hors du plateau");
     assert(color != Cell::Empty && "createsDoubleFreeThree() demande la couleur du joueur");
     assert(board.at(pos) == Cell::Empty && "createsDoubleFreeThree() s'appelle avant de poser la pierre");
-    if (!findCaptures(board, pos, color).empty())
+    if (canCapture(board, pos, color))
         return false;
 
     int freeThrees = 0;

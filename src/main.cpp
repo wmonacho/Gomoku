@@ -1,8 +1,11 @@
 #include <SFML/Graphics.hpp>
 #include <imgui-SFML.h>
 #include <imgui.h>
+#include <iostream>
+#include "app/Dto.hpp"
 #include "ui/mainMenu.hpp"
 #include "ui/BoardView.hpp"
+#include "app/GameService.hpp"
 
 ImFont* chargeFont() {
     ImGuiIO& io = ImGui::GetIO();
