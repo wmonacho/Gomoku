@@ -2,6 +2,7 @@
 // Pas demandé par le sujet : c'est notre alarme pour la profondeur 10 et la moyenne < 500 ms.
 //   make bench                    limite de temps de GameService
 //   make bench BENCH_ARGS=1000    autre limite, en ms
+//   make bench BENCH_ARGS=fixed   profondeur fixe sans limite de temps : vérifie qu'une optimisation ne change rien
 
 #include "core/Game.hpp"
 #include "core/ai/Search.hpp"
@@ -10,6 +11,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <memory>
 #include <vector>
 
@@ -71,6 +73,34 @@ namespace {
         return stats.empty() ? 0.0 : total / stats.size();
     }
 
+    // Mode « fixed » : profondeur fixe, sans limite de temps. Le coup et le nombre de nœuds ne dépendent alors
+    // que du code : une optimisation qui ne change pas le comportement doit redonner exactement les mêmes lignes.
+    constexpr int    FIXED_DEPTH = 9;
+    constexpr int    FIXED_SETUP_MOVES = 12;
+    constexpr double NO_TIME_LIMIT_MS = 1e9;
+
+    void fixedDepthReport() {
+        long totalNodes = 0;
+        for (size_t i = 0; i < OPENINGS.size(); i++) {
+            Game game;
+            for (const Pos& pos : OPENINGS[i])
+                game.play(pos);
+            // Quelques coups joués à petite profondeur, pour tester aussi des positions de milieu de partie.
+            for (int move = 0; move < FIXED_SETUP_MOVES && !game.winner(); move++) {
+                auto setup = std::make_unique<Search>();
+                game.play(setup->findBestMove(game, 2, NO_TIME_LIMIT_MS).pos);
+            }
+            if (game.winner())
+                continue;
+            auto search = std::make_unique<Search>();
+            const MoveSuggestion s = search->findBestMove(game, FIXED_DEPTH, NO_TIME_LIMIT_MS);
+            totalNodes += s.nodesEvaluated;
+            std::printf("  position %zu : coup (%2d, %2d), %9ld nœuds, %7.1f ms\n",
+                        i + 1, s.pos.x, s.pos.y, s.nodesEvaluated, s.elapsedMs);
+        }
+        std::printf("  total : %ld nœuds\n", totalNodes);
+    }
+
     // Sous DEPTH faute de temps, sans victoire déjà assurée : c'est ce qui fait échouer le sujet.
     bool tooShallow(const MoveStats& s) {
         return s.depth < DEPTH && s.timeUp && !s.forcedWin;
@@ -78,6 +108,11 @@ namespace {
 }
 
 int main(int argc, char** argv) {
+    if (argc > 1 && std::strcmp(argv[1], "fixed") == 0) {
+        std::printf("Profondeur fixe %d, sans limite de temps\n", FIXED_DEPTH);
+        fixedDepthReport();
+        return 0;
+    }
     const double timeLimitMs = argc > 1 ? std::atof(argv[1]) : DEFAULT_TIME_LIMIT_MS;
     if (timeLimitMs <= 0.0) {
         std::printf("limite de temps invalide : %s\n", argv[1]);

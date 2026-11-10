@@ -35,6 +35,8 @@ namespace {
         const Game game;
         CHECK(game.currentPlayer() == Cell::Black);
         CHECK(!game.winner());
+        CHECK(!game.endReason());
+        CHECK(!game.isOver());
         CHECK(game.captureCount(Cell::Black) == 0);
         CHECK(game.captureCount(Cell::White) == 0);
     }
@@ -133,12 +135,15 @@ namespace {
         playAll(game, {{0, 8}, {1, 8}, {10, 8}, {2, 8}, {3, 8}});
         CHECK(game.captureCount(Cell::Black) == 10);
         CHECK(game.winner() == Cell::Black);
+        CHECK(game.endReason() == WinReason::Captures);
+        CHECK(game.isOver());
     }
 
     void testUnbreakableFiveWins() {
         Game game;
         playAll(game, {{0, 0}, {0, 10}, {1, 0}, {1, 10}, {2, 0}, {2, 10}, {3, 0}, {3, 10}, {4, 0}});
         CHECK(game.winner() == Cell::Black);
+        CHECK(game.endReason() == WinReason::Align);
     }
 
     void testNoMoveAfterTheGameIsOver() {
@@ -159,7 +164,9 @@ namespace {
         Game game;
         blackMakesBreakableFive(game);
         playAll(game, {{15, 15}});
+        // Le coup de Blanc termine la partie, mais c'est Noir qui gagne, par alignement.
         CHECK(game.winner() == Cell::Black);
+        CHECK(game.endReason() == WinReason::Align);
     }
 
     void testBrokenFiveDoesNotWin() {
@@ -191,6 +198,7 @@ namespace {
         playAll(game, {{3, 14}});
         CHECK(game.captureCount(Cell::Black) == 10);
         CHECK(game.winner() == Cell::Black);
+        CHECK(game.endReason() == WinReason::Captures);
     }
 
     // ---- Undo et reset ----
@@ -211,9 +219,11 @@ namespace {
         playAll(game, {{0, 0}, {0, 10}, {1, 0}, {1, 10}, {2, 0}, {2, 10}, {3, 0}, {3, 10}, {4, 0}});
         game.undo();
         CHECK(!game.winner());
+        CHECK(!game.endReason());
         CHECK(game.currentPlayer() == Cell::Black);
         CHECK(game.play({4, 0}).isLegal);
         CHECK(game.winner() == Cell::Black);
+        CHECK(game.endReason() == WinReason::Align);
     }
 
     // Si undo oubliait le 5 en sursis, Blanc pourrait jouer ailleurs sans perdre.

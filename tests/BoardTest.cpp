@@ -81,6 +81,27 @@ namespace {
         CHECK(board.at({0, 0}) == Cell::Empty);
     }
 
+    // Menace de capture : X O O suivi d'une case vide, dans un sens ou dans l'autre. O O O n'est pas une paire.
+    void testCountsCaptureThreats() {
+        Board board;
+        board.place({5, 5}, Cell::Black);
+        board.place({6, 5}, Cell::White);
+        board.place({7, 5}, Cell::White);
+        CHECK(board.captureThreats(Cell::Black) == 1);
+        CHECK(board.captureThreats(Cell::White) == 0);
+        board.place({8, 5}, Cell::White);
+        CHECK(board.captureThreats(Cell::Black) == 0);
+        board.undo();
+
+        Board mirrored;
+        mirrored.place({6, 9}, Cell::White);
+        mirrored.place({7, 9}, Cell::White);
+        mirrored.place({8, 9}, Cell::Black);
+        CHECK(mirrored.captureThreats(Cell::Black) == 1);
+        mirrored.place({5, 9}, Cell::Black);
+        CHECK(mirrored.captureThreats(Cell::Black) == 0);
+    }
+
     void testIsInside() {
         const Board board;
         CHECK(board.isInside({0, 0}));
@@ -205,6 +226,51 @@ namespace {
         }
     }
 
+    bool checkNearbyConsistent(const Board& board) {
+        for (int y = 0; y < BOARD_SIZE; y++) {
+            for (int x = 0; x < BOARD_SIZE; x++) {
+                if (board.stonesNearby({x, y}) != board.countStonesNearbyFromScratch({x, y})) {
+                    CHECK(board.stonesNearby({x, y}) == board.countStonesNearbyFromScratch({x, y}));
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    // Même principe que pour le hash : le compteur de pierres proches doit suivre place, capture et undo.
+    void testNearbyStaysConsistentAfterEveryOperation() {
+        std::mt19937 rng(99);
+        Board board;
+
+        for (int round = 0; round < 20; round++) {
+            int played = 0;
+            Cell color = Cell::Black;
+            for (int i = 0; i < 150; i++) {
+                const Pos pos = {static_cast<int>(rng() % BOARD_SIZE), static_cast<int>(rng() % BOARD_SIZE)};
+                if (board.at(pos) != Cell::Empty)
+                    continue;
+                board.place(pos, color);
+                for (Pos direction : DIRECTIONS) {
+                    const Pos neighbor = step(pos, direction);
+                    if (board.isInside(neighbor) && board.at(neighbor) == opponent(color)
+                        && board.captureCount(color) < 10 && rng() % 3 == 0)
+                        board.capture(neighbor);
+                }
+                if (!checkNearbyConsistent(board))
+                    return;
+                color = opponent(color);
+                played++;
+            }
+
+            for (int i = 0; i < played; i++) {
+                board.undo();
+                if (!checkNearbyConsistent(board))
+                    return;
+            }
+        }
+    }
+
     // Transposition : les mêmes coups joués dans un autre ordre donnent la même position, donc le même hash.
     void testHashIgnoresMoveOrder() {
         Board firstOrder;
@@ -292,6 +358,8 @@ int main() {
     TestRunner::run("le hash dépend des captures", testHashDependsOnCaptureCount);
     TestRunner::run("place/undo de N coups restaure l'état et le hash", testPlaceThenUndoRestoresStartState);
     TestRunner::run("hash cohérent après chaque place/capture/undo", testHashStaysConsistentAfterEveryOperation);
+    TestRunner::run("pierres proches cohérentes après chaque place/capture/undo", testNearbyStaysConsistentAfterEveryOperation);
+    TestRunner::run("menaces de capture comptées", testCountsCaptureThreats);
     TestRunner::run("transposition : l'ordre des coups ne change pas le hash", testHashIgnoresMoveOrder);
     TestRunner::run("l'ordre des captures ne change pas le hash", testHashIgnoresCaptureOrder);
     TestRunner::run("aucune allocation dans place/capture/undo", testNoAllocationInPlaceCaptureUndo);

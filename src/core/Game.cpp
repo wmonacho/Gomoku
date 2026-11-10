@@ -14,6 +14,7 @@ void Game::reset(Cell firstPlayer) {
     board_ = Board();
     currentPlayer_ = firstPlayer;
     winner_ = std::nullopt;
+    endReason_ = std::nullopt;
 
     pendingFive_ = std::nullopt;
     history_.clear();
@@ -24,7 +25,11 @@ MoveResult Game::play(Pos pos) {
     if (error != MoveError::None) {
         return {false, describe(error), {}};
     }
-    return {true, "", applyMove(pos)};
+    const std::vector<Pos> captures = applyMove(pos);
+    // Seulement ici, pas dans playLegal : chercher un coup légal parcourt le plateau, trop cher pour la recherche.
+    if (!endReason_ && !hasLegalMove())
+        endGame(std::nullopt, WinReason::Draw);
+    return {true, "", captures};
 }
 
 void Game::playLegal(Pos pos) {
@@ -33,7 +38,7 @@ void Game::playLegal(Pos pos) {
 }
 
 std::vector<Pos> Game::applyMove(Pos pos) {
-    history_.push_back({currentPlayer_, winner_, pendingFive_});
+    history_.push_back({currentPlayer_, winner_, endReason_, pendingFive_});
 
     board_.place(pos, currentPlayer_);
     const std::vector<Pos> captures = Rules::findCaptures(board_, pos, currentPlayer_);
@@ -45,12 +50,12 @@ std::vector<Pos> Game::applyMove(Pos pos) {
     pendingFive_ = std::nullopt;
 
     if (board_.captureCount(currentPlayer_) >= Rules::WINNING_CAPTURES) {
-        winner_ = currentPlayer_;
+        endGame(currentPlayer_, WinReason::Captures);
     } else if (opponentHadPendingFive && Rules::hasFiveInARow(board_, opponent(currentPlayer_))) {
-        winner_ = opponent(currentPlayer_);
+        endGame(opponent(currentPlayer_), WinReason::Align);
     } else if (Rules::makesFiveInARow(board_, pos, currentPlayer_)) {
         if (!Rules::canAnswerFive(board_, pos, currentPlayer_))
-            winner_ = currentPlayer_;
+            endGame(currentPlayer_, WinReason::Align);
         else
             pendingFive_ = pos;
     }
@@ -64,17 +69,30 @@ void Game::undo() {
     const State& previous = history_.back();
     currentPlayer_ = previous.currentPlayer;
     winner_ = previous.winner;
+    endReason_ = previous.endReason;
     pendingFive_ = previous.pendingFive;
     history_.pop_back();
+}
+
+void Game::endGame(std::optional<Cell> winner, WinReason reason) {
+    winner_ = winner;
+    endReason_ = reason;
+}
+
+bool Game::hasLegalMove() const {
+    for (int y = 0; y < BOARD_SIZE; y++)
+        for (int x = 0; x < BOARD_SIZE; x++)
+            if (isLegalMove({x, y}))
+                return true;
+    return false;
 }
 
 bool Game::isLegalMove(Pos pos) const {
     return checkMove(pos) == MoveError::None;
 }
 
-
 Game::MoveError Game::checkMove(Pos pos) const {
-    if (winner_) {
+    if (endReason_) {
         return MoveError::GameOver;
     }
     if (!board_.isInside(pos)) {
@@ -100,7 +118,6 @@ const char* Game::describe(MoveError error) {
     return "";
 }
 
-
 const Board& Game::board() const {
     return board_;
 }
@@ -115,6 +132,14 @@ int Game::captureCount(Cell color) const {
 
 std::optional<Cell> Game::winner() const {
     return winner_;
+}
+
+std::optional<WinReason> Game::endReason() const {
+    return endReason_;
+}
+
+bool Game::isOver() const {
+    return endReason_.has_value();
 }
 
 std::optional<Pos> Game::pendingFive() const {
