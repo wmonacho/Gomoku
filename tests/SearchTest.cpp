@@ -1,7 +1,10 @@
+#include "app/AIDebug.hpp"
 #include "core/ai/Eval.hpp"
 #include "core/ai/Search.hpp"
 
 #include <initializer_list>
+#include <random>
+#include <string>
 
 #include "support/TestRunner.hpp"
 
@@ -41,6 +44,35 @@ namespace {
             {4, 2}, {12, 12},
             {1, 2},
         });
+    }
+
+    bool checkEvalConsistent(const Game& game) {
+        const bool consistent = Eval::evaluate(game, Cell::Black) == Eval::evaluateFromScratch(game, Cell::Black);
+        CHECK(consistent);
+        return consistent;
+    }
+
+    // Le score incrémental de Board doit suivre chaque coup (captures comprises) et chaque undo.
+    void testIncrementalEvalMatchesFromScratch() {
+        std::mt19937 rng(7);
+        for (int round = 0; round < 20; round++) {
+            Game game;
+            int played = 0;
+            for (int i = 0; i < 400 && !game.winner(); i++) {
+                const Pos pos = {static_cast<int>(rng() % 9) + 5, static_cast<int>(rng() % 9) + 5};
+                if (!game.isLegalMove(pos))
+                    continue;
+                game.playLegal(pos);
+                played++;
+                if (!checkEvalConsistent(game))
+                    return;
+            }
+            for (int i = 0; i < played; i++) {
+                game.undo();
+                if (!checkEvalConsistent(game))
+                    return;
+            }
+        }
     }
 
     void testEmptyBoardIsWorthZero() {
@@ -160,6 +192,32 @@ namespace {
         CHECK(suggestion.depth == TEST_DEPTH);
         CHECK(suggestion.nodesEvaluated > 0);
     }
+
+    // Débogage : le coup choisi est en tête des coups étudiés, avec le score annoncé, et la liste est triée.
+    void testReportsTheRootMoves() {
+        Game game;
+        playAll(game, {{9, 9}, {10, 10}, {9, 10}});
+        Search search;
+        const MoveSuggestion suggestion = search.findBestMove(game, TEST_DEPTH, TEST_TIME_LIMIT_MS);
+        CHECK(suggestion.rootMoves.size() > 1);
+        CHECK(samePos(suggestion.rootMoves[0].pos, suggestion.pos));
+        CHECK(suggestion.rootMoves[0].exact);
+        CHECK(suggestion.rootMoves[0].score == suggestion.score);
+        for (size_t i = 1; i < suggestion.rootMoves.size(); i++)
+            CHECK(suggestion.rootMoves[i - 1].score >= suggestion.rootMoves[i].score);
+    }
+
+    void testDescribesTheReasoning() {
+        Game game;
+        playAll(game, {{9, 9}, {10, 10}, {9, 10}});
+        Search search;
+        const MoveSuggestion suggestion = search.findBestMove(game, TEST_DEPTH, TEST_TIME_LIMIT_MS);
+        const std::string text = AIDebug::describe(suggestion);
+        const std::string chosen = "coup (" + std::to_string(suggestion.pos.x) + ", " + std::to_string(suggestion.pos.y) + ")";
+        CHECK(text.find(chosen) != std::string::npos);
+        CHECK(text.find("ligne prévue") != std::string::npos);
+        CHECK(text.find("coups étudiés") != std::string::npos);
+    }
 }
 
 int main() {
@@ -172,6 +230,7 @@ int main() {
     TestRunner::run("eval : un trois contre le bord", testThreeAgainstTheEdgeIsWorthHalf);
     TestRunner::run("eval : un trois bloqué des deux côtés", testThreeBlockedOnBothSidesIsWorthZero);
     TestRunner::run("eval : les captures comptent", testCapturesRaiseTheScore);
+    TestRunner::run("eval : l'incrémental égale le recalcul complet", testIncrementalEvalMatchesFromScratch);
 
     TestRunner::run("search : centre sur plateau vide", testPlaysTheCenterOnAnEmptyBoard);
     TestRunner::run("search : termine son 5", testCompletesItsFive);
@@ -182,6 +241,8 @@ int main() {
     TestRunner::run("search : garde le 5 en sursis", testSearchKeepsThePendingFive);
     TestRunner::run("search : que des coups légaux", testSelfPlayOnlyPlaysLegalMoves);
     TestRunner::run("search : statistiques remplies", testReportsTheSearchStats);
+    TestRunner::run("debug : coups étudiés à la racine", testReportsTheRootMoves);
+    TestRunner::run("debug : raisonnement en texte", testDescribesTheReasoning);
 
     return TestRunner::finish();
 }

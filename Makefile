@@ -13,6 +13,7 @@ LDFLAGS     = -Llibs/sfml/lib -Wl,-rpath=./libs/sfml/lib -lsfml-graphics -lsfml-
 # Fichiers sources
 SRCS        = src/main.cpp \
               src/app/GameService.cpp \
+              src/app/AIDebug.cpp \
               src/core/Board.cpp \
               src/core/Rules.cpp \
               src/core/Game.cpp \

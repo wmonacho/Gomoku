@@ -1,5 +1,6 @@
 #include "core/Rules.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <cstddef>
@@ -8,10 +9,7 @@
 namespace {
 
     bool contains(const std::vector<Pos>& stones, Pos pos) {
-        for (const Pos& stone : stones)
-            if (stone.x == pos.x && stone.y == pos.y)
-                return true;
-        return false;
+        return std::find(stones.begin(), stones.end(), pos) != stones.end();
     }
 
     // Les pierres de removed comptent comme vides : on simule une capture sans copier le plateau.
@@ -25,18 +23,14 @@ namespace {
         return count;
     }
 
+    // color joue en pos : capture dans la direction dir si on a pos, adverse, adverse, color.
     bool checkPatternCapture(const Board& board, Pos pos, Pos dir, Cell color) {
-        Cell enemyColor = (color == Cell::Black) ? Cell::White : Cell::Black;
-        Pos pos1 = step(pos, dir);
-        Pos pos2 = step(pos1, dir);
-        Pos pos3 = step(pos2, dir);
-
-        if (board.isInside(pos1) && board.isInside(pos2) && board.isInside(pos3)) {
-            if (board.at(pos1) == enemyColor && board.at(pos2) == enemyColor && board.at(pos3) == color) {
-                return true;
-            }
-        }
-        return false;
+        const Cell enemy = opponent(color);
+        const Pos pos1 = step(pos, dir, 1);
+        const Pos pos2 = step(pos, dir, 2);
+        const Pos pos3 = step(pos, dir, 3);
+        return board.isInside(pos3)
+            && board.at(pos1) == enemy && board.at(pos2) == enemy && board.at(pos3) == color;
     }
 
     std::vector<Pos> stonesOfFives(const Board& board, Pos pos, Cell color) {
@@ -68,6 +62,29 @@ namespace {
             }
         }
         return false;
+    }
+
+    // Dans _XXX_, _XX_X_ et _X_XX_, pos est l'un des 'X' : les deux autres sont à 3 cases ou moins de lui.
+    constexpr int FREE_THREE_REACH = 3;
+
+    int stonesNear(const Board& board, Pos pos, Pos dir, Cell color) {
+        int count = 0;
+        for (int i = -FREE_THREE_REACH; i <= FREE_THREE_REACH; i++) {
+            const Pos cur = step(pos, dir, i);
+            if (i != 0 && board.isInside(cur) && board.at(cur) == color)
+                count++;
+        }
+        return count;
+    }
+
+    // Condition nécessaire, bien moins chère que hasFreeThree : un trois libre demande 2 pierres proches
+    // sur sa ligne, un double trois demande donc 2 directions comme ça.
+    bool mayCreateDoubleFreeThree(const Board& board, Pos pos, Cell color) {
+        int directions = 0;
+        for (const Pos& dir : DIRECTIONS)
+            if (stonesNear(board, pos, dir, color) >= 2)
+                directions++;
+        return directions >= 2;
     }
 
     constexpr int LINE_RADIUS = 5;
@@ -138,8 +155,7 @@ bool makesFiveInARow(const Board& board, Pos pos, Cell color) {
     assert(board.isInside(pos) && "makesFiveInARow() hors du plateau");
     assert(board.at(pos) == color && "makesFiveInARow() s'appelle après avoir posé la pierre de color en pos");
 
-    for (const Pos& dir : DIRECTIONS)
-    {
+    for (const Pos& dir : DIRECTIONS) {
         const Pos opposite = {-dir.x, -dir.y};
         const int total = 1
                         + countInDirection(board, pos, dir, color)
@@ -185,6 +201,8 @@ bool createsDoubleFreeThree(const Board& board, Pos pos, Cell color) {
     assert(board.isInside(pos) && "createsDoubleFreeThree() hors du plateau");
     assert(color != Cell::Empty && "createsDoubleFreeThree() demande la couleur du joueur");
     assert(board.at(pos) == Cell::Empty && "createsDoubleFreeThree() s'appelle avant de poser la pierre");
+    if (!mayCreateDoubleFreeThree(board, pos, color))
+        return false;
     if (canCapture(board, pos, color))
         return false;
 
